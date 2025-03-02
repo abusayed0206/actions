@@ -29,12 +29,15 @@ def format_expiration_message(domain_info, domain):
     if not isinstance(expiration_date, datetime.datetime):
         return f"⚠️ {domain}: Invalid expiration date format."
 
+    utc_tz = pytz.utc
+    dhaka_tz = pytz.timezone('Asia/Dhaka')
     now_dhaka = get_dhaka_time()
 
-    # Convert expiration_date to Dhaka timezone if it's naive
+    # Convert expiration_date from UTC to Dhaka time
     if expiration_date.tzinfo is None or expiration_date.tzinfo.utcoffset(expiration_date) is None:
-        dhaka_tz = pytz.timezone('Asia/Dhaka')
-        expiration_date = dhaka_tz.localize(expiration_date)
+        expiration_date = utc_tz.localize(expiration_date).astimezone(dhaka_tz)
+    else:
+        expiration_date = expiration_date.astimezone(dhaka_tz)
 
     remaining_days = (expiration_date - now_dhaka).days
 
@@ -62,11 +65,11 @@ def send_telegram_message(message, bot_token, chat_id):
     payload = {
         "chat_id": chat_id,
         "text": message,
-        "parse_mode": "Markdown"  # Optional: For formatting
+        "parse_mode": "Markdown"
     }
     try:
         response = requests.post(url, json=payload)
-        response.raise_for_status()  # Raise HTTPError for bad responses (4xx or 5xx)
+        response.raise_for_status()
         print("Telegram message sent successfully.")
     except requests.exceptions.RequestException as e:
         print(f"Failed to send Telegram message: {e}")
