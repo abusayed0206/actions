@@ -3,6 +3,7 @@ name: Whois Report
 on:
   schedule:
     - cron: '0 0 * * *' # Runs every day at 00:00 UTC (06:00 Dhaka time)
+  workflow_dispatch: # Allows manual triggering
 
 jobs:
   whois_report:
