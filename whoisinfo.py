@@ -3,6 +3,7 @@ import datetime
 import requests
 import os
 import pytz
+import time
 
 def get_dhaka_time():
     """Returns the current time in Dhaka timezone (GMT+6)."""
@@ -34,7 +35,7 @@ def format_expiration_message(domain_info, domain):
 
     utc_tz = pytz.utc
     dhaka_tz = pytz.timezone('Asia/Dhaka')
-    now_dhaka = get_dhaka_time()  # Ensuring now_dhaka is timezone-aware
+    now_dhaka = get_dhaka_time()
 
     # Convert expiration_date from UTC to Dhaka time
     if expiration_date.tzinfo is None or expiration_date.tzinfo.utcoffset(expiration_date) is None:
@@ -42,23 +43,29 @@ def format_expiration_message(domain_info, domain):
     else:
         expiration_date = expiration_date.astimezone(dhaka_tz)
 
-    # Ensure both dates are timezone-aware before subtraction
-    remaining_days = (expiration_date - now_dhaka).days
+    remaining_time = expiration_date - now_dhaka
+    remaining_days = remaining_time.days
+    remaining_hours = remaining_time.seconds // 3600  # Convert seconds to hours
 
     registrar = domain_info.registrar
     if isinstance(registrar, list):
         registrar = registrar[0]
     registrar_name = registrar if isinstance(registrar, str) else "Unknown"
 
-    # Formatting the message
-    message = f"🌐 {domain}\n"
-    message += f"Registrar: {registrar_name}\n"
-    message += f"Expiration: {expiration_date.strftime('%Y-%m-%d %H:%M:%S %Z%z')}\n"
+    # Expiration message with formatting
+    formatted_expiration_date = expiration_date.strftime('%d %B, %Y')
+    formatted_expiration_time = expiration_date.strftime('%I:%M %p')  # 12-hour format with AM/PM
 
-    if remaining_days < 0:
-        message += f"🚨 EXPIRED! ({abs(remaining_days)} days ago)\n"
-    else:
-        message += f"Remaining: {remaining_days} days\n"
+    status_emoji = "✅ sob thik ache" if remaining_days > 0 else "🔥🚨 EXPIRED!"
+
+    message = (
+        f"🌐 **{domain}**\n"
+        f"🏢 **Registrar:** {registrar_name}\n"
+        f"⏳ **Expiration Date:** {formatted_expiration_date}\n"
+        f"🕒 **Time:** {formatted_expiration_time} GMT+6\n"
+        f"📆 **Remaining:** {remaining_days} days, {remaining_hours} hours\n"
+        f"{status_emoji}"
+    )
 
     return message
 
@@ -73,9 +80,9 @@ def send_telegram_message(message, bot_token, chat_id):
     try:
         response = requests.post(url, json=payload)
         response.raise_for_status()
-        print("Telegram message sent successfully.")
+        print("✅ Telegram message sent successfully.")
     except requests.exceptions.RequestException as e:
-        print(f"Failed to send Telegram message: {e}")
+        print(f"⚠️ Failed to send Telegram message: {e}")
 
 def main():
     """Main function to check domain expiration and send a Telegram notification."""
@@ -92,16 +99,14 @@ def main():
     chat_id = os.environ.get("TELEGRAM_CHAT_ID")
 
     if not bot_token or not chat_id:
-        print("Telegram bot token or chat ID not found in environment variables.")
+        print("⚠️ Telegram bot token or chat ID not found in environment variables.")
         return
 
-    all_messages = ""
     for domain in domains:
         domain_info = whois_lookup(domain)
         message = format_expiration_message(domain_info, domain)
-        all_messages += message + "\n\n"
-
-    send_telegram_message(all_messages, bot_token, chat_id)
+        send_telegram_message(message, bot_token, chat_id)
+        time.sleep(3)  # Delay of 3 seconds between messages
 
 if __name__ == "__main__":
     main()
