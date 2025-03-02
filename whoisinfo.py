@@ -5,10 +5,12 @@ import os
 import pytz
 
 def get_dhaka_time():
+    """Returns the current time in Dhaka timezone (GMT+6)."""
     dhaka_tz = pytz.timezone('Asia/Dhaka')
     return datetime.datetime.now(dhaka_tz)
 
 def whois_lookup(domain):
+    """Fetches WHOIS information for a given domain."""
     try:
         domain_info = whois.whois(domain)
         return domain_info
@@ -19,6 +21,7 @@ def whois_lookup(domain):
         return None
 
 def format_expiration_message(domain_info, domain):
+    """Formats the expiration information for a domain in Dhaka time (GMT+6)."""
     if not domain_info or not hasattr(domain_info, 'expiration_date'):
         return f"⚠️ {domain}: Could not retrieve expiration information."
 
@@ -31,7 +34,7 @@ def format_expiration_message(domain_info, domain):
 
     utc_tz = pytz.utc
     dhaka_tz = pytz.timezone('Asia/Dhaka')
-    now_dhaka = get_dhaka_time()
+    now_dhaka = get_dhaka_time()  # Ensuring now_dhaka is timezone-aware
 
     # Convert expiration_date from UTC to Dhaka time
     if expiration_date.tzinfo is None or expiration_date.tzinfo.utcoffset(expiration_date) is None:
@@ -39,16 +42,15 @@ def format_expiration_message(domain_info, domain):
     else:
         expiration_date = expiration_date.astimezone(dhaka_tz)
 
+    # Ensure both dates are timezone-aware before subtraction
     remaining_days = (expiration_date - now_dhaka).days
 
     registrar = domain_info.registrar
     if isinstance(registrar, list):
         registrar = registrar[0]
-    if isinstance(registrar, str):
-        registrar_name = registrar
-    else:
-        registrar_name = "Unknown"
+    registrar_name = registrar if isinstance(registrar, str) else "Unknown"
 
+    # Formatting the message
     message = f"🌐 {domain}\n"
     message += f"Registrar: {registrar_name}\n"
     message += f"Expiration: {expiration_date.strftime('%Y-%m-%d %H:%M:%S %Z%z')}\n"
@@ -61,6 +63,7 @@ def format_expiration_message(domain_info, domain):
     return message
 
 def send_telegram_message(message, bot_token, chat_id):
+    """Sends a message to a Telegram bot."""
     url = f"https://api.telegram.org/bot{bot_token}/sendMessage"
     payload = {
         "chat_id": chat_id,
@@ -75,6 +78,7 @@ def send_telegram_message(message, bot_token, chat_id):
         print(f"Failed to send Telegram message: {e}")
 
 def main():
+    """Main function to check domain expiration and send a Telegram notification."""
     domains = [
         "sayed.blog",
         "sayed.page",
