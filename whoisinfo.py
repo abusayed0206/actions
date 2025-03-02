@@ -23,18 +23,24 @@ def format_expiration_message(domain_info, domain):
         return f"⚠️ {domain}: Could not retrieve expiration information."
 
     expiration_date = domain_info.expiration_date
-    if isinstance(expiration_date, list): # handle multiple expiration dates.
-      expiration_date = expiration_date[0] #take the first one.
+    if isinstance(expiration_date, list):
+        expiration_date = expiration_date[0]
 
     if not isinstance(expiration_date, datetime.datetime):
         return f"⚠️ {domain}: Invalid expiration date format."
 
     now_dhaka = get_dhaka_time()
+
+    # Convert expiration_date to Dhaka timezone if it's naive
+    if expiration_date.tzinfo is None or expiration_date.tzinfo.utcoffset(expiration_date) is None:
+        dhaka_tz = pytz.timezone('Asia/Dhaka')
+        expiration_date = dhaka_tz.localize(expiration_date)
+
     remaining_days = (expiration_date - now_dhaka).days
 
     registrar = domain_info.registrar
     if isinstance(registrar, list):
-        registrar = registrar[0] # take the first one.
+        registrar = registrar[0]
     if isinstance(registrar, str):
         registrar_name = registrar
     else:
