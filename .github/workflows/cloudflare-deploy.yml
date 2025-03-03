@@ -18,7 +18,7 @@ jobs:
       - name: Send Telegram Notification
         if: success()
         run: |
-          MESSAGE="✅ *Cloudflare Pages Build Successful!* 🚀\n\n🌐 [Visit](https://sayed.page)"
+          MESSAGE="✅ *Cloudflare Pages Build Successful!* 🚀 🌐[sayed.page](https://sayed.page)"
           curl -s -X POST "https://api.telegram.org/bot$TELEGRAM_BOT_TOKEN/sendMessage" \
             -d chat_id="$TELEGRAM_CHAT_ID" \
             -d text="$MESSAGE" \
