@@ -1,0 +1,30 @@
+name: Cloudflare Pages Deploy
+
+on:
+  workflow_dispatch:  # Manual trigger
+  schedule:
+    - cron: '0 0 * * *'  # Runs daily at 00:00 UTC
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Trigger Cloudflare Pages Deploy
+        run: |
+          response=$(curl -s -X POST "$CF_PAGE")
+          echo "Response: $response"
+
+      - name: Send Telegram Notification
+        if: success()
+        run: |
+          MESSAGE="✅ *Cloudflare Pages Build Successful!* 🚀\n\n🌐 [Visit](https://sayed.page)"
+          curl -s -X POST "https://api.telegram.org/bot$TELEGRAM_BOT_TOKEN/sendMessage" \
+            -d chat_id="$TELEGRAM_CHAT_ID" \
+            -d text="$MESSAGE" \
+            -d parse_mode="Markdown"
+
+    env:
+      CF_PAGE: ${{ secrets.CF_PAGE }}
+      TELEGRAM_BOT_TOKEN: ${{ secrets.TELEGRAM_BOT_TOKEN }}
+      TELEGRAM_CHAT_ID: ${{ secrets.TELEGRAM_CHAT_ID }}
