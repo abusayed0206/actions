@@ -37,7 +37,7 @@ jobs:
         run: |
           git config --global user.name "github-actions[bot]"
           git config --global user.email "github-actions[bot]@users.noreply.github.com"
-          git add files/letterboxd.csv scripts/minor_version.txt
+          git add files/letterboxd.csv files/minor_version.txt
           git commit -m "Updated Letterboxd movie list" || echo "No changes to commit"
           git push
         env:
