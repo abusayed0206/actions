@@ -5,7 +5,7 @@ import os
 from datetime import datetime
 
 def fetch_trakt_data(path, json_filename, apikey, username):
-    url = f"https://api.trakt.tv/users/{username}/{path}"
+    url = f"https://api.trakt.tv/users/{username}/{path}?limit=1000"
     headers = {
         "Content-Type": "application/json",
         "trakt-api-key": apikey,
@@ -74,6 +74,43 @@ def convert_to_csv(trakt_file, output_csv):
         print(f"Converted and saved to {csv_filepath}")
         return csv_filepath
 
+def upload_to_worker(csv_filepath):
+    # Get the auth key from GitHub secrets
+    auth_key = os.getenv("X_AUTH_KEY")
+    
+    # Prepare the request to upload the CSV
+    with open(csv_filepath, 'rb') as f:
+        files = {'file': (os.path.basename(csv_filepath), f, 'application/csv')}
+        headers = {'x-auth-key': auth_key}
+        response = requests.post("https://sharexworker.abusayed.dev/upload", files=files, headers=headers)
+        
+    if response.status_code == 200:
+        data = response.json()
+        image_url = data.get("image")
+        if image_url:
+            print(f"File uploaded successfully. Image URL: {image_url}")
+            return image_url
+        else:
+            print(f"Error: No image URL in response. {response.text}")
+    else:
+        print(f"Error uploading file: {response.status_code} - {response.text}")
+    return None
+
+def send_telegram_notification(image_url):
+    bot_token = os.getenv("TELEGRAM_BOT_TOKEN")
+    chat_id = os.getenv("TELEGRAM_CHAT_ID")
+    message = f"Letterboxd CSV ready🎉\nDownload [here]({image_url})\nLetterboxd Import Page Link https://letterboxd.com/import/"
+    
+    url = f"https://api.telegram.org/bot{bot_token}/sendMessage"
+    payload = {
+        "chat_id": chat_id,
+        "text": message,
+        "parse_mode": "Markdown"
+    }
+    response = requests.post(url, data=payload)
+    if response.status_code != 200:
+        print(f"Error sending notification: {response.status_code}")
+
 def push_to_github():
     os.system("git config --global user.name 'github-actions'")
     os.system("git config --global user.email 'github-actions@github.com'")
@@ -87,11 +124,14 @@ def main():
     JSON_FILENAME = "watched_movies.json"
     CSV_FILENAME = "letterboxd.csv"
     
-    json_filepath = fetch_trakt_data("history/movies", JSON_FILENAME, API_KEY, USERNAME)
+    json_filepath = fetch_trakt_data("watched/movies", JSON_FILENAME, API_KEY, USERNAME)
     if json_filepath:
         csv_filepath = convert_to_csv(json_filepath, CSV_FILENAME)
         if csv_filepath:
-            push_to_github()
+            image_url = upload_to_worker(csv_filepath)
+            if image_url:
+                push_to_github()
+                send_telegram_notification(image_url)
 
 if __name__ == "__main__":
     main()

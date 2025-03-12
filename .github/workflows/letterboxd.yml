@@ -2,7 +2,8 @@ name: Letterboxd Movies List in CSV
 
 on:
   schedule:
-    - cron: '0 0 * * *'  # Runs daily at midnight UTC
+    # Runs every Monday at a random time (use different cron expressions for different randomness)
+    - cron: '0 12 * * 1'  # Runs at noon UTC every Monday (modify as per desired randomness)
   workflow_dispatch:  # Allows manual trigger
 
 jobs:
@@ -25,12 +26,7 @@ jobs:
           TRAKT_API_KEY: ${{ secrets.TRAKT_API_KEY }}
           TRAKT_USERNAME: ${{ secrets.TRAKT_USERNAME }}
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          TELEGRAM_BOT_TOKEN: ${{ secrets.TELEGRAM_BOT_TOKEN }}
+          TELEGRAM_CHAT_ID: ${{ secrets.TELEGRAM_CHAT_ID }}
+          X_AUTH_KEY: ${{ secrets.X_AUTH_KEY }}  # Add the new secret for the worker
         run: python scripts/letterboxd_movies.py
-
-      - name: Push changes
-        run: |
-          git config --global user.name "github-actions"
-          git config --global user.email "github-actions@github.com"
-          git add files/watched_movies.json files/letterboxd.csv
-          git commit -m "Update watched movies and Letterboxd CSV" || echo "No changes to commit"
-          git push https://x-access-token:${{ secrets.GH_TOKEN }}@github.com/${{ github.repository }}.git
