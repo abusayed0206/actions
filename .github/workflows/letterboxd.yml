@@ -28,17 +28,16 @@ jobs:
           TRAKT_USERNAME: ${{ secrets.TRAKT_USERNAME }}
         run: python scripts/letterboxd_movies.py
 
-      - name: Upload 
+      - name: Send Telegram Notification
         run: |
           python <<EOF
           import requests
           import os
-          import json
 
-          def send_telegram_notification(image_url):
+          def send_telegram_notification():
               bot_token = os.getenv("TELEGRAM_BOT_TOKEN")
               chat_id = os.getenv("TELEGRAM_CHAT_ID")
-              message = f"Letterboxd CSV ready🎉\\nDownload [here]({https://github.com/abusayed0206/actions/blob/main/files/letterboxd.csv})\\nLetterboxd Import Page Link https://letterboxd.com/import/"
+              message = f"Letterboxd CSV ready🎉\\nDownload [here](https://github.com/abusayed0206/actions/blob/main/files/letterboxd.csv)\\nLetterboxd Import Page [Link](https://letterboxd.com/import/)"
               url = f"https://api.telegram.org/bot{bot_token}/sendMessage"
               payload = {
                   "chat_id": chat_id,
@@ -49,13 +48,9 @@ jobs:
               if response.status_code != 200:
                   print(f"Error sending notification: {response.status_code}")
 
-          csv_filepath = "files/letterboxd.csv"
-          image_url = upload_to_worker(csv_filepath)
-          if image_url:
-              send_telegram_notification(image_url)
+          send_telegram_notification()
           EOF
         env:
-          X_AUTH_KEY: ${{ secrets.X_AUTH_KEY }}
           TELEGRAM_BOT_TOKEN: ${{ secrets.TELEGRAM_BOT_TOKEN }}
           TELEGRAM_CHAT_ID: ${{ secrets.TELEGRAM_CHAT_ID }}
 
