@@ -21,11 +21,6 @@ jobs:
       - name: Install dependencies
         run: pip install pandas requests
 
-      - name: Calculate Version
-        id: version
-        run: |
-          python scripts/lb_version.py > version.txt
-          echo "VERSION=$(cat version.txt)" >> $GITHUB_OUTPUT
 
       - name: Run script to fetch and convert data
         env:
@@ -51,6 +46,8 @@ jobs:
                       image_url = data.get("image")
                       if image_url:
                           print(f"File uploaded successfully. Image URL: {image_url}")
+                          if not image_url.endswith(".csv"):
+                              image_url = image_url + ".csv"
                           return image_url
                       else:
                           print(f"Error: No image URL in response. {response.text}")
