@@ -245,16 +245,61 @@ jobs:
             cat $error_file >> $summary_file
           fi
 
-      - name: Send Telegram Notification
-        if: always()
-        run: |
-          MESSAGE=$(cat summary.md)
-          JSON_PAYLOAD=$(jq -n --arg msg "$MESSAGE" '{chat_id: $ENV.TELEGRAM_CHAT_ID, text: $msg, parse_mode: "Markdown"}')
+          - name: Generate Telegram Report
+          run: |
+            # Create a temporary file for the markdown report
+            telegram_report="telegram_report.md"
+            echo "# 🔄 GitHub Mirroring Report" > $telegram_report
+            
+            # Check if there are any errors
+            if [ -s errors.txt ]; then
+              has_errors=true
+              echo -e "\n## ❌ Repositories with Errors" >> $telegram_report
+              
+              # Process errors and generate links
+              while read error_line; do
+                # Extract repo name and platform from error message
+                if [[ $error_line == *"GitLab"* ]]; then
+                  repo_name=$(echo "$error_line" | sed -n 's/.*GitLab.*failed: \(.*\)/\1/p')
+                  echo "- **$repo_name** on GitLab → [View on GitLab](https://gitlab.com/${{ secrets.GITLAB_USERNAME }}/$repo_name)" >> $telegram_report
+                elif [[ $error_line == *"Codeberg"* ]]; then
+                  repo_name=$(echo "$error_line" | sed -n 's/.*Codeberg.*failed: \(.*\)/\1/p')
+                  echo "- **$repo_name** on Codeberg → [View on Codeberg](https://codeberg.org/${{ secrets.CODEBERG_USERNAME }}/$repo_name)" >> $telegram_report
+                fi
+              done < errors.txt
+            else
+              has_errors=false
+              echo -e "\n## ✅ All repositories mirrored successfully!" >> $telegram_report
+            fi
+            
+            # Add a summary of processed repositories
+            total_repos=$(wc -l < repo_info.txt)
+            echo -e "\n## 📊 Summary" >> $telegram_report
+            echo "- Total repositories processed: **$total_repos**" >> $telegram_report
+            
+            if [ "$has_errors" = "true" ]; then
+              error_count=$(grep -c "failed" errors.txt)
+              echo "- Repositories with errors: **$error_count**" >> $telegram_report
+              success_count=$((total_repos - error_count))
+              echo "- Successfully mirrored: **$success_count**" >> $telegram_report
+            fi
+            
+            # Add timestamp
+            echo -e "\n_Report generated on $(date)_" >> $telegram_report
+            
+            # Save the report for sending
+            cat $telegram_report > telegram_message.md
 
-          curl -s -X POST \
-            -H "Content-Type: application/json" \
-            -d "$JSON_PAYLOAD" \
-            "https://api.telegram.org/bot$TELEGRAM_BOT_TOKEN/sendMessage"
-        env:
-          TELEGRAM_BOT_TOKEN: ${{ secrets.TELEGRAM_BOT_TOKEN }}
-          TELEGRAM_CHAT_ID: ${{ secrets.TELEGRAM_CHAT_ID }}
+            - name: Send Telegram Notification
+          if: always()
+          run: |
+            MESSAGE=$(cat telegram_message.md)
+            JSON_PAYLOAD=$(jq -n --arg msg "$MESSAGE" '{chat_id: $ENV.TELEGRAM_CHAT_ID, text: $msg, parse_mode: "Markdown", disable_web_page_preview: true}')
+
+            curl -s -X POST \
+              -H "Content-Type: application/json" \
+              -d "$JSON_PAYLOAD" \
+              "https://api.telegram.org/bot$TELEGRAM_BOT_TOKEN/sendMessage"
+          env:
+            TELEGRAM_BOT_TOKEN: ${{ secrets.TELEGRAM_BOT_TOKEN }}
+            TELEGRAM_CHAT_ID: ${{ secrets.TELEGRAM_CHAT_ID }}

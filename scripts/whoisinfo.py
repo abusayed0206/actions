@@ -56,7 +56,14 @@ def format_expiration_message(domain_info, domain):
     formatted_expiration_date = expiration_date.strftime('%d %B, %Y')
     formatted_expiration_time = expiration_date.strftime('%I:%M %p')  # 12-hour format with AM/PM
 
-    status_emoji = "✅ sob thik ache" if remaining_days > 0 else "🔥🚨 EXPIRED!"
+    status_emoji = "✅ সব ঠিক আছে" if remaining_days > 0 else "🔥🚨 EXPIRED!"
+
+    # Add EPP status
+    epp_status = domain_info.status if hasattr(domain_info, 'status') else "Unknown"
+    if isinstance(epp_status, list):
+        epp_status = "\n".join([f"- {status}" for status in epp_status]) #format the status.
+    else:
+        epp_status = f"- {epp_status}"
 
     message = (
         f"🌐 **{domain}**\n"
@@ -64,6 +71,7 @@ def format_expiration_message(domain_info, domain):
         f"⏳ **Expiration Date:** {formatted_expiration_date}\n"
         f"🕒 **Time:** {formatted_expiration_time} GMT+6\n"
         f"📆 **Remaining:** {remaining_days} days, {remaining_hours} hours\n"
+        f"🔒 **Domain Status:**\n{epp_status}\n"
         f"{status_emoji}"
     )
 
