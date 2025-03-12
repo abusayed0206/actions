@@ -17,7 +17,7 @@ jobs:
 
       - name: Fetch All GitHub Repositories
         run: |
-          curl -s -H "Authorization: token ${{ secrets.GITHUB_TOKEN }}" \
+          curl -s -H "Authorization: token ${{ secrets.GH_TOKEN }}" \
             "https://api.github.com/user/repos?per_page=100" | jq -r '.[].name' > repo_list.txt
 
       - name: Setup SSH
