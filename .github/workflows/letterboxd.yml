@@ -1,8 +1,8 @@
-name: Sync Trakt to Letterboxd
+name: Sync Trakt to Letterboxd with Releases
 
 on:
   schedule:
-    - cron: "0 0 * * *"  # Runs daily at midnight UTC
+    - cron: "50 16 * * 6"  # Runs every Saturday at 16:50 UTC
   workflow_dispatch:  # Allows manual trigger
 
 jobs:
@@ -21,6 +21,12 @@ jobs:
       - name: Install dependencies
         run: pip install pandas requests
 
+      - name: Calculate Version
+        id: version
+        run: |
+          python scripts/lb_version.py > version.txt
+          echo "VERSION=$(cat version.txt)" >> $GITHUB_OUTPUT
+
       - name: Run script to fetch and convert data
         env:
           TRAKT_API_KEY: ${{ secrets.TRAKT_API_KEY }}
@@ -31,8 +37,21 @@ jobs:
         run: |
           git config --global user.name "github-actions[bot]"
           git config --global user.email "github-actions[bot]@users.noreply.github.com"
-          git add files/letterboxd.csv
+          git add files/letterboxd.csv scripts/minor_version.txt
           git commit -m "Updated Letterboxd movie list" || echo "No changes to commit"
           git push
         env:
           GH_TOKEN: ${{ secrets.GH_TOKEN }}
+
+      - name: Create Release
+        uses: actions/create-release@v1
+        if: github.ref == github.ref_name
+        with:
+          tag_name: v${{ steps.version.outputs.VERSION }}
+          release_name: Release v${{ steps.version.outputs.VERSION }}
+          body_path: ./files/letterboxd.csv
+          draft: false
+          prerelease: false
+          files: ./files/letterboxd.csv
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
