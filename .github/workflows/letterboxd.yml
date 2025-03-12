@@ -1,14 +1,14 @@
-name: Letterboxd Movies List in CSV
+name: Sync Trakt to Letterboxd
 
 on:
   schedule:
-    # Runs every Monday at a random time (use different cron expressions for different randomness)
-    - cron: '0 12 * * 1'  # Runs at noon UTC every Monday (modify as per desired randomness)
+    - cron: "0 0 * * *"  # Runs daily at midnight UTC
   workflow_dispatch:  # Allows manual trigger
 
 jobs:
-  update-movies:
+  sync-movies:
     runs-on: ubuntu-latest
+
     steps:
       - name: Checkout repository
         uses: actions/checkout@v4
@@ -16,17 +16,23 @@ jobs:
       - name: Set up Python
         uses: actions/setup-python@v4
         with:
-          python-version: '3.9'
+          python-version: "3.x"
 
       - name: Install dependencies
-        run: pip install requests pandas
+        run: pip install pandas requests
 
-      - name: Run script
+      - name: Run script to fetch and convert data
         env:
           TRAKT_API_KEY: ${{ secrets.TRAKT_API_KEY }}
           TRAKT_USERNAME: ${{ secrets.TRAKT_USERNAME }}
-          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-          TELEGRAM_BOT_TOKEN: ${{ secrets.TELEGRAM_BOT_TOKEN }}
-          TELEGRAM_CHAT_ID: ${{ secrets.TELEGRAM_CHAT_ID }}
-          X_AUTH_KEY: ${{ secrets.X_AUTH_KEY }}  # Add the new secret for the worker
         run: python scripts/letterboxd_movies.py
+
+      - name: Commit and push changes
+        run: |
+          git config --global user.name "github-actions[bot]"
+          git config --global user.email "github-actions[bot]@users.noreply.github.com"
+          git add files/letterboxd.csv
+          git commit -m "Updated Letterboxd movie list" || echo "No changes to commit"
+          git push
+        env:
+          GH_TOKEN: ${{ secrets.GH_TOKEN }}
