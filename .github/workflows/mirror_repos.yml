@@ -10,7 +10,7 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - name: Install Dependencies
-        run: sudo apt-get -qq install jq curl
+        run: sudo apt-get -qq install jq curl git
 
       - name: Fetch All GitHub Repositories
         id: fetch-repos
@@ -49,75 +49,125 @@ jobs:
           while read repo_info; do
             full_name=$(echo "$repo_info" | cut -d' ' -f1)
             is_private=$(echo "$repo_info" | cut -d' ' -f2)
-            original_repo_name=$(basename "$full_name")
+            repo_name=$(basename "$full_name")
 
             echo "::group::Processing $full_name"
 
-            # Generate unique repo name
-            new_repo_name=$original_repo_name
-            counter=1
-            while true; do
-              gitlab_status=$(curl -s -o /dev/null -w "%{http_code}" \
-                -H "PRIVATE-TOKEN: ${{ secrets.GITLAB_TOKEN }}" \
-                "https://gitlab.com/api/v4/projects/${{ secrets.GITLAB_USERNAME }}%2F$new_repo_name")
+            # Check if repositories already exist
+            gitlab_status=$(curl -s -o /dev/null -w "%{http_code}" \
+              -H "PRIVATE-TOKEN: ${{ secrets.GITLAB_TOKEN }}" \
+              "https://gitlab.com/api/v4/projects/${{ secrets.GITLAB_USERNAME }}%2F$repo_name")
 
-              codeberg_status=$(curl -s -o /dev/null -w "%{http_code}" \
-                -H "Authorization: token ${{ secrets.CODEBERG_TOKEN }}" \
-                "https://codeberg.org/api/v1/repos/${{ secrets.CODEBERG_USERNAME }}/$new_repo_name")
+            codeberg_status=$(curl -s -o /dev/null -w "%{http_code}" \
+              -H "Authorization: token ${{ secrets.CODEBERG_TOKEN }}" \
+              "https://codeberg.org/api/v1/repos/${{ secrets.CODEBERG_USERNAME }}/$repo_name")
 
-              if [ $gitlab_status -eq 404 ] && [ $codeberg_status -eq 404 ]; then
-                break
-              fi
-
-              new_repo_name="${original_repo_name}-${counter}"
-              ((counter++))
-            done
-
-            # Create repositories
+            # Get latest commit from GitHub
+            github_latest_commit=$(curl -s -H "Authorization: token ${{ secrets.GH_TOKEN }}" \
+              "https://api.github.com/repos/$full_name/commits/HEAD" | jq -r '.sha')
+            
+            echo "GitHub latest commit: $github_latest_commit"
+            
+            # Initialize variables
+            gitlab_exists=false
+            codeberg_exists=false
+            gitlab_needs_update=true
+            codeberg_needs_update=true
             visibility=$([ "$is_private" = "true" ] && echo "private" || echo "public")
             private_codeberg=$([ "$is_private" = "true" ] && echo "true" || echo "false")
 
-            # GitLab Creation
-            if [ $gitlab_status -eq 404 ]; then
-              curl -X POST -H "PRIVATE-TOKEN: ${{ secrets.GITLAB_TOKEN }}" \
-                -d "name=$new_repo_name&visibility=$visibility" \
-                "https://gitlab.com/api/v4/projects"
-              echo "Created GitLab repo: $new_repo_name ($visibility)"
+            # Check GitLab repository
+            if [ $gitlab_status -eq 200 ]; then
+              gitlab_exists=true
+              # Try to get latest commit from GitLab
+              gitlab_latest_commit=$(curl -s -H "PRIVATE-TOKEN: ${{ secrets.GITLAB_TOKEN }}" \
+                "https://gitlab.com/api/v4/projects/${{ secrets.GITLAB_USERNAME }}%2F$repo_name/repository/commits" | \
+                jq -r 'if type=="array" and length>0 then .[0].id else "" end')
+              
+              echo "GitLab latest commit: $gitlab_latest_commit"
+              
+              # Compare commits
+              if [ ! -z "$gitlab_latest_commit" ] && [ "$gitlab_latest_commit" == "$github_latest_commit" ]; then
+                gitlab_needs_update=false
+                echo "GitLab repo is up-to-date"
+              fi
             fi
 
-            # Codeberg Creation
-            if [ $codeberg_status -eq 404 ]; then
+            # Check Codeberg repository
+            if [ $codeberg_status -eq 200 ]; then
+              codeberg_exists=true
+              # Note: Codeberg API doesn't have a direct way to get the latest commit
+              # We'll need to push anyway, git will only update if needed
+            fi
+
+            # Create GitLab repository if it doesn't exist
+            if [ "$gitlab_exists" = false ]; then
+              echo "Creating new GitLab repository: $repo_name"
+              curl -X POST -H "PRIVATE-TOKEN: ${{ secrets.GITLAB_TOKEN }}" \
+                -d "name=$repo_name&visibility=$visibility" \
+                "https://gitlab.com/api/v4/projects"
+            fi
+
+            # Create Codeberg repository if it doesn't exist
+            if [ "$codeberg_exists" = false ]; then
+              echo "Creating new Codeberg repository: $repo_name"
               curl -X POST -H "Authorization: token ${{ secrets.CODEBERG_TOKEN }}" \
                 -H "Content-Type: application/json" \
-                -d "{\"name\": \"$new_repo_name\", \"private\": $private_codeberg}" \
+                -d "{\"name\": \"$repo_name\", \"private\": $private_codeberg}" \
                 "https://codeberg.org/api/v1/user/repos"
-              echo "Created Codeberg repo: $new_repo_name (private: $private_codeberg)"
             fi
 
-            # Clone and Mirror
-            echo "Cloning https://github.com/$full_name.git"
-            git clone --mirror "https://${{ secrets.GH_TOKEN }}@github.com/$full_name.git" "$new_repo_name.git"
+            # Only clone and push if updates are needed
+            if [ "$gitlab_needs_update" = true ] || [ "$codeberg_needs_update" = true ] || [ "$gitlab_exists" = false ] || [ "$codeberg_exists" = false ]; then
+              echo "Updates needed, cloning and pushing repository"
+              
+              # Clone the repository
+              git clone --mirror "https://${{ secrets.GH_TOKEN }}@github.com/$full_name.git" "$repo_name.git"
+              cd "$repo_name.git"
 
-            cd "$new_repo_name.git"
+              # Push to GitLab if needed
+              if [ "$gitlab_needs_update" = true ] || [ "$gitlab_exists" = false ]; then
+                echo "Pushing to GitLab"
+                git remote set-url --push origin "git@gitlab.com:${{ secrets.GITLAB_USERNAME }}/$repo_name.git"
+                if ! git push --mirror; then
+                  echo "❌ GitLab push failed: $repo_name" >> ../$error_file
+                else
+                  echo "✅ GitLab push successful: $repo_name"
+                fi
+              fi
 
-            # Push to GitLab
-            git remote set-url --push origin "git@gitlab.com:${{ secrets.GITLAB_USERNAME }}/$new_repo_name.git"
-            if ! git push --mirror; then
-              echo "❌ GitLab push failed: $new_repo_name" >> ../$error_file
+              # Push to Codeberg if needed
+              if [ "$codeberg_needs_update" = true ] || [ "$codeberg_exists" = false ]; then
+                echo "Pushing to Codeberg"
+                git remote add codeberg "git@codeberg.org:${{ secrets.CODEBERG_USERNAME }}/$repo_name.git" 2>/dev/null || \
+                git remote set-url codeberg "git@codeberg.org:${{ secrets.CODEBERG_USERNAME }}/$repo_name.git"
+                
+                if ! git push --mirror codeberg; then
+                  echo "❌ Codeberg push failed: $repo_name" >> ../$error_file
+                else
+                  echo "✅ Codeberg push successful: $repo_name"
+                fi
+              fi
+
+              cd ..
+              rm -rf "$repo_name.git"
+            else
+              echo "No updates needed for $repo_name"
             fi
-
-            # Push to Codeberg
-            git remote add codeberg "git@codeberg.org:${{ secrets.CODEBERG_USERNAME }}/$new_repo_name.git" 2>/dev/null || true
-            if ! git push --mirror codeberg; then
-              echo "❌ Codeberg push failed: $new_repo_name" >> ../$error_file
-            fi
-
-            cd ..
-            rm -rf "$new_repo_name.git"
 
             # Update summary
-            echo "- **$original_repo_name** → $new_repo_name" >> ../$summary_file
-            echo "  - GitLab: $visibility, Codeberg: $private_codeberg" >> ../$summary_file
+            echo "- **$repo_name**" >> $summary_file
+            if [ "$gitlab_exists" = true ]; then
+              echo "  - GitLab: Existing repo, update needed: $gitlab_needs_update" >> $summary_file
+            else
+              echo "  - GitLab: New repo created" >> $summary_file
+            fi
+            
+            if [ "$codeberg_exists" = true ]; then
+              echo "  - Codeberg: Existing repo" >> $summary_file
+            else
+              echo "  - Codeberg: New repo created" >> $summary_file
+            fi
 
             echo "::endgroup::"
           done < repo_info.txt
