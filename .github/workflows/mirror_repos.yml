@@ -1,0 +1,90 @@
+name: Mirror All GitHub Repositories to Codeberg & GitLab
+
+on:
+  schedule:
+    - cron: "0 */6 * * *"  # Runs every 6 hours
+  workflow_dispatch:  # Allows manual trigger
+
+jobs:
+  mirror:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Install Dependencies
+        run: sudo apt-get install jq curl
+
+      - name: Fetch All GitHub Repositories
+        run: |
+          curl -s -H "Authorization: token ${{ secrets.GITHUB_TOKEN }}" \
+            "https://api.github.com/user/repos?per_page=100" | jq -r '.[].name' > repo_list.txt
+
+      - name: Setup SSH
+        run: |
+          mkdir -p ~/.ssh
+          echo "${{ secrets.MIRROR_SSH_PRIVATE_KEY }}" > ~/.ssh/id_ed25519
+          chmod 600 ~/.ssh/id_ed25519
+          ssh-keyscan gitlab.com codeberg.org >> ~/.ssh/known_hosts
+
+      - name: Mirror Repositories
+        run: |
+          while read repo_name; do
+            echo "Processing repository: $repo_name"
+
+            # Generate unique repo name if conflict exists
+            original_repo_name=$repo_name
+            counter=1
+
+            while true; do
+              gitlab_check=$(curl -s --header "PRIVATE-TOKEN: ${{ secrets.GITLAB_TOKEN }}" \
+                "https://gitlab.com/api/v4/projects/${{ secrets.GITLAB_USERNAME }}%2F$repo_name")
+
+              codeberg_check=$(curl -s -H "Authorization: token ${{ secrets.CODEBERG_TOKEN }}" \
+                "https://codeberg.org/api/v1/repos/${{ secrets.CODEBERG_USERNAME }}/$repo_name")
+
+              if [[ "$gitlab_check" == *"404"* && "$codeberg_check" == *"404"* ]]; then
+                break  # Repo name is unique
+              fi
+
+              repo_name="${original_repo_name}-${counter}"
+              ((counter++))
+            done
+
+            echo "Final repo name: $repo_name"
+
+            # Create repository on GitLab if missing
+            if [[ "$gitlab_check" == *"404"* ]]; then
+              echo "Creating repository on GitLab..."
+              curl -X POST --header "PRIVATE-TOKEN: ${{ secrets.GITLAB_TOKEN }}" \
+                --data "name=$repo_name&visibility=public" "https://gitlab.com/api/v4/projects"
+            fi
+
+            # Create repository on Codeberg if missing
+            if [[ "$codeberg_check" == *"404"* ]]; then
+              echo "Creating repository on Codeberg..."
+              curl -X POST -H "Authorization: token ${{ secrets.CODEBERG_TOKEN }}" \
+                -H "Content-Type: application/json" \
+                -d "{\"name\": \"$repo_name\", \"private\": false}" \
+                "https://codeberg.org/api/v1/user/repos"
+            fi
+
+            # Clone & Mirror Repository
+            if [ -d "$repo_name.git" ]; then
+              cd "$repo_name.git"
+              git fetch --all
+            else
+              git clone --mirror "git@github.com:${{ github.repository_owner }}/$original_repo_name.git" "$repo_name.git"
+              cd "$repo_name.git"
+            fi
+
+            git remote set-url --push origin "git@gitlab.com:${{ secrets.GITLAB_USERNAME }}/$repo_name.git"
+            git push --mirror || echo "GitLab push failed for $repo_name"
+
+            git remote add codeberg "git@codeberg.org:${{ secrets.CODEBERG_USERNAME }}/$repo_name.git" || true
+            git push --mirror codeberg || echo "Codeberg push failed for $repo_name"
+
+            cd ..
+            rm -rf "$repo_name.git"
+
+          done < repo_list.txt
