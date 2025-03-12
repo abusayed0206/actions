@@ -1,24 +1,35 @@
-name: Mirror All GitHub Repositories to Codeberg & GitLab
+name: Mirror GitHub Repositories to GitLab and Codeberg
 
 on:
   schedule:
-    - cron: "0 */6 * * *"  # Runs every 6 hours
-  workflow_dispatch:  # Allows manual trigger
+    - cron: "3 0 * * 3" # Weekly runs
+  workflow_dispatch:
 
 jobs:
   mirror:
     runs-on: ubuntu-latest
     steps:
-      - name: Checkout repository
-        uses: actions/checkout@v4
-
       - name: Install Dependencies
-        run: sudo apt-get install jq curl
+        run: sudo apt-get -qq install jq curl
 
       - name: Fetch All GitHub Repositories
+        id: fetch-repos
         run: |
-          curl -s -H "Authorization: token ${{ secrets.GH_TOKEN }}" \
-            "https://api.github.com/user/repos?per_page=100" | jq -r '.[].name' > repo_list.txt
+          page=1
+          rm -f repo_info.txt
+          while true; do
+            echo "Fetching page $page"
+            repos=$(curl -s -H "Authorization: token ${{ secrets.GH_TOKEN }}" \
+              "https://api.github.com/user/repos?per_page=100&page=$page&type=all")
+            
+            if [ -z "$repos" ] || [ "$(echo "$repos" | jq length)" -eq 0 ]; then
+              break
+            fi
+            
+            echo "$repos" | jq -r '.[] | "\(.full_name) \(.private)"' >> repo_info.txt
+            ((page++))
+          done
+          echo "Total repositories: $(wc -l < repo_info.txt)"
 
       - name: Setup SSH
         run: |
@@ -29,62 +40,105 @@ jobs:
 
       - name: Mirror Repositories
         run: |
-          while read repo_name; do
-            echo "Processing repository: $repo_name"
+          summary_file="summary.md"
+          error_file="errors.txt"
+          echo "# Mirroring Summary" > $summary_file
+          echo "## Processed Repositories" >> $summary_file
+          echo "" > $error_file
 
-            # Generate unique repo name if conflict exists
-            original_repo_name=$repo_name
+          while read repo_info; do
+            full_name=$(echo "$repo_info" | cut -d' ' -f1)
+            is_private=$(echo "$repo_info" | cut -d' ' -f2)
+            original_repo_name=$(basename "$full_name")
+
+            echo "::group::Processing $full_name"
+
+            # Generate unique repo name
+            new_repo_name=$original_repo_name
             counter=1
-
             while true; do
-              gitlab_check=$(curl -s --header "PRIVATE-TOKEN: ${{ secrets.GITLAB_TOKEN }}" \
-                "https://gitlab.com/api/v4/projects/${{ secrets.GITLAB_USERNAME }}%2F$repo_name")
+              gitlab_status=$(curl -s -o /dev/null -w "%{http_code}" \
+                -H "PRIVATE-TOKEN: ${{ secrets.GITLAB_TOKEN }}" \
+                "https://gitlab.com/api/v4/projects/${{ secrets.GITLAB_USERNAME }}%2F$new_repo_name")
 
-              codeberg_check=$(curl -s -H "Authorization: token ${{ secrets.CODEBERG_TOKEN }}" \
-                "https://codeberg.org/api/v1/repos/${{ secrets.CODEBERG_USERNAME }}/$repo_name")
+              codeberg_status=$(curl -s -o /dev/null -w "%{http_code}" \
+                -H "Authorization: token ${{ secrets.CODEBERG_TOKEN }}" \
+                "https://codeberg.org/api/v1/repos/${{ secrets.CODEBERG_USERNAME }}/$new_repo_name")
 
-              if [[ "$gitlab_check" == *"404"* && "$codeberg_check" == *"404"* ]]; then
-                break  # Repo name is unique
+              if [ $gitlab_status -eq 404 ] && [ $codeberg_status -eq 404 ]; then
+                break
               fi
 
-              repo_name="${original_repo_name}-${counter}"
+              new_repo_name="${original_repo_name}-${counter}"
               ((counter++))
             done
 
-            echo "Final repo name: $repo_name"
+            # Create repositories
+            visibility=$([ "$is_private" = "true" ] && echo "private" || echo "public")
+            private_codeberg=$([ "$is_private" = "true" ] && echo "true" || echo "false")
 
-            # Create repository on GitLab if missing
-            if [[ "$gitlab_check" == *"404"* ]]; then
-              echo "Creating repository on GitLab..."
-              curl -X POST --header "PRIVATE-TOKEN: ${{ secrets.GITLAB_TOKEN }}" \
-                --data "name=$repo_name&visibility=public" "https://gitlab.com/api/v4/projects"
+            # GitLab Creation
+            if [ $gitlab_status -eq 404 ]; then
+              curl -X POST -H "PRIVATE-TOKEN: ${{ secrets.GITLAB_TOKEN }}" \
+                -d "name=$new_repo_name&visibility=$visibility" \
+                "https://gitlab.com/api/v4/projects"
+              echo "Created GitLab repo: $new_repo_name ($visibility)"
             fi
 
-            # Create repository on Codeberg if missing
-            if [[ "$codeberg_check" == *"404"* ]]; then
-              echo "Creating repository on Codeberg..."
+            # Codeberg Creation
+            if [ $codeberg_status -eq 404 ]; then
               curl -X POST -H "Authorization: token ${{ secrets.CODEBERG_TOKEN }}" \
                 -H "Content-Type: application/json" \
-                -d "{\"name\": \"$repo_name\", \"private\": false}" \
+                -d "{\"name\": \"$new_repo_name\", \"private\": $private_codeberg}" \
                 "https://codeberg.org/api/v1/user/repos"
+              echo "Created Codeberg repo: $new_repo_name (private: $private_codeberg)"
             fi
 
-            # Clone & Mirror Repository
-            if [ -d "$repo_name.git" ]; then
-              cd "$repo_name.git"
-              git fetch --all
-            else
-              git clone --mirror "git@github.com:${{ github.repository_owner }}/$original_repo_name.git" "$repo_name.git"
-              cd "$repo_name.git"
+            # Clone and Mirror
+            echo "Cloning https://github.com/$full_name.git"
+            git clone --mirror "https://${{ secrets.GH_TOKEN }}@github.com/$full_name.git" "$new_repo_name.git"
+
+            cd "$new_repo_name.git"
+
+            # Push to GitLab
+            git remote set-url --push origin "git@gitlab.com:${{ secrets.GITLAB_USERNAME }}/$new_repo_name.git"
+            if ! git push --mirror; then
+              echo "❌ GitLab push failed: $new_repo_name" >> ../$error_file
             fi
 
-            git remote set-url --push origin "git@gitlab.com:${{ secrets.GITLAB_USERNAME }}/$repo_name.git"
-            git push --mirror || echo "GitLab push failed for $repo_name"
-
-            git remote add codeberg "git@codeberg.org:${{ secrets.CODEBERG_USERNAME }}/$repo_name.git" || true
-            git push --mirror codeberg || echo "Codeberg push failed for $repo_name"
+            # Push to Codeberg
+            git remote add codeberg "git@codeberg.org:${{ secrets.CODEBERG_USERNAME }}/$new_repo_name.git" 2>/dev/null || true
+            if ! git push --mirror codeberg; then
+              echo "❌ Codeberg push failed: $new_repo_name" >> ../$error_file
+            fi
 
             cd ..
-            rm -rf "$repo_name.git"
+            rm -rf "$new_repo_name.git"
 
-          done < repo_list.txt
+            # Update summary
+            echo "- **$original_repo_name** → $new_repo_name" >> ../$summary_file
+            echo "  - GitLab: $visibility, Codeberg: $private_codeberg" >> ../$summary_file
+
+            echo "::endgroup::"
+          done < repo_info.txt
+
+          # Add errors to summary
+          if [ -s $error_file ]; then
+            echo "" >> $summary_file
+            echo "## Errors" >> $summary_file
+            cat $error_file >> $summary_file
+          fi
+
+      - name: Send Telegram Notification
+        if: always()
+        run: |
+          MESSAGE=$(cat summary.md)
+          JSON_PAYLOAD=$(jq -n --arg msg "$MESSAGE" '{chat_id: $ENV.TELEGRAM_CHAT_ID, text: $msg, parse_mode: "Markdown"}')
+
+          curl -s -X POST \
+            -H "Content-Type: application/json" \
+            -d "$JSON_PAYLOAD" \
+            "https://api.telegram.org/bot$TELEGRAM_BOT_TOKEN/sendMessage"
+        env:
+          TELEGRAM_BOT_TOKEN: ${{ secrets.TELEGRAM_BOT_TOKEN }}
+          TELEGRAM_CHAT_ID: ${{ secrets.TELEGRAM_CHAT_ID }}
