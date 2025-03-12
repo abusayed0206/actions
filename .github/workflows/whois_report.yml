@@ -23,7 +23,7 @@ jobs:
           pip install python-whois requests pytz
 
       - name: Run whois report
-        run: python whoisinfo.py
+        run: python scripts/whoisinfo.py
         env:
           TELEGRAM_BOT_TOKEN: ${{ secrets.TELEGRAM_BOT_TOKEN }}
           TELEGRAM_CHAT_ID: ${{ secrets.TELEGRAM_CHAT_ID }}
