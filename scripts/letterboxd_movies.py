@@ -5,7 +5,7 @@ import os
 from datetime import datetime
 
 def fetch_trakt_data(path, json_filename, apikey, username):
-    url = f"https://api.trakt.tv/users/{username}/{path}?limit=1000"
+    url = f"https://api.trakt.tv/users/{username}/watched/movies?limit=1000"  # Updated URL
     headers = {
         "Content-Type": "application/json",
         "trakt-api-key": apikey,
@@ -60,8 +60,9 @@ def convert_to_csv(trakt_file, output_csv):
                 if 'movie' in item:
                     record[id_keys[index]] = item['movie']['ids'].get(id_keys[index], "")
             
-            for index, key in enumerate(raw_keys):
-                record[raw_keys[index]] = item[raw_keys[index]]
+            # Ensure 'watched_at' exists before using it
+            if 'watched_at' in item:
+                record['watched_at'] = item['watched_at']
             
             pairs = [["title", "Title"], ["year", "Year"], ["imdb", "imdbID"], ["tmdb", "tmdbID"],
                      ["watched_at", "WatchedDate"]]
