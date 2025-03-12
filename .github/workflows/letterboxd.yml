@@ -1,4 +1,4 @@
-name: Sync Trakt to Letterboxd with Releases
+name: Sync Trakt to Letterboxd
 
 on:
   schedule:
@@ -33,6 +33,55 @@ jobs:
           TRAKT_USERNAME: ${{ secrets.TRAKT_USERNAME }}
         run: python scripts/letterboxd_movies.py
 
+      - name: Upload and Notify
+        run: |
+          python <<EOF
+          import requests
+          import os
+          import json
+
+          def upload_to_worker(csv_filepath):
+              auth_key = os.getenv("X_AUTH_KEY")
+              with open(csv_filepath, 'rb') as f:
+                  files = {'file': (os.path.basename(csv_filepath), f, 'application/csv')}
+                  headers = {'x-auth-key': auth_key}
+                  response = requests.post("https://sharexworker.abusayed.dev/upload", files=files, headers=headers)
+                  if response.status_code == 200:
+                      data = response.json()
+                      image_url = data.get("image")
+                      if image_url:
+                          print(f"File uploaded successfully. Image URL: {image_url}")
+                          return image_url
+                      else:
+                          print(f"Error: No image URL in response. {response.text}")
+                  else:
+                      print(f"Error uploading file: {response.status_code} - {response.text}")
+                  return None
+
+          def send_telegram_notification(image_url):
+              bot_token = os.getenv("TELEGRAM_BOT_TOKEN")
+              chat_id = os.getenv("TELEGRAM_CHAT_ID")
+              message = f"Letterboxd CSV ready🎉\\nDownload [here]({image_url})\\nLetterboxd Import Page Link https://letterboxd.com/import/"
+              url = f"https://api.telegram.org/bot{bot_token}/sendMessage"
+              payload = {
+                  "chat_id": chat_id,
+                  "text": message,
+                  "parse_mode": "Markdown"
+              }
+              response = requests.post(url, data=payload)
+              if response.status_code != 200:
+                  print(f"Error sending notification: {response.status_code}")
+
+          csv_filepath = "files/letterboxd.csv"
+          image_url = upload_to_worker(csv_filepath)
+          if image_url:
+              send_telegram_notification(image_url)
+          EOF
+        env:
+          X_AUTH_KEY: ${{ secrets.X_AUTH_KEY }}
+          TELEGRAM_BOT_TOKEN: ${{ secrets.TELEGRAM_BOT_TOKEN }}
+          TELEGRAM_CHAT_ID: ${{ secrets.TELEGRAM_CHAT_ID }}
+
       - name: Commit and push changes
         run: |
           git config --global user.name "github-actions[bot]"
@@ -42,16 +91,3 @@ jobs:
           git push
         env:
           GH_TOKEN: ${{ secrets.GH_TOKEN }}
-
-      - name: Create Release
-        uses: actions/create-release@v1
-        if: github.ref == github.ref_name
-        with:
-          tag_name: v${{ steps.version.outputs.VERSION }}
-          release_name: Release v${{ steps.version.outputs.VERSION }}
-          body: "Updated Letterboxd movie list." # simple release notes.
-          draft: false
-          prerelease: false
-          files: ./files/letterboxd.csv
-        env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
