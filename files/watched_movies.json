@@ -856,6 +856,21 @@
     },
     {
         "plays": 1,
+        "last_watched_at": "2025-03-22T16:18:35.000Z",
+        "last_updated_at": "2025-03-22T16:18:40.000Z",
+        "movie": {
+            "title": "A Beautiful Mind",
+            "year": 2001,
+            "ids": {
+                "trakt": 358,
+                "slug": "a-beautiful-mind-2001",
+                "imdb": "tt0268978",
+                "tmdb": 453
+            }
+        }
+    },
+    {
+        "plays": 1,
         "last_watched_at": "2021-02-11T12:48:00.000Z",
         "last_updated_at": "2021-02-11T12:48:00.000Z",
         "movie": {
@@ -5606,6 +5621,21 @@
                 "slug": "wonder-woman-2017",
                 "imdb": "tt0451279",
                 "tmdb": 297762
+            }
+        }
+    },
+    {
+        "plays": 1,
+        "last_watched_at": "2025-03-15T10:38:00.000Z",
+        "last_updated_at": "2025-03-16T09:38:18.000Z",
+        "movie": {
+            "title": "La La Land",
+            "year": 2016,
+            "ids": {
+                "trakt": 192932,
+                "slug": "la-la-land-2016",
+                "imdb": "tt3783958",
+                "tmdb": 313369
             }
         }
     },
@@ -10391,6 +10421,21 @@
                 "slug": "lucky-baskhar-2024",
                 "imdb": "tt27540542",
                 "tmdb": 1239511
+            }
+        }
+    },
+    {
+        "plays": 1,
+        "last_watched_at": "2025-03-16T09:37:05.000Z",
+        "last_updated_at": "2025-03-16T09:37:10.000Z",
+        "movie": {
+            "title": "Rekhachithram",
+            "year": 2025,
+            "ids": {
+                "trakt": 1050545,
+                "slug": "rekhachithram-2025",
+                "imdb": "tt32284154",
+                "tmdb": 1290954
             }
         }
     },
