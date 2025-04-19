@@ -1546,6 +1546,21 @@
     },
     {
         "plays": 1,
+        "last_watched_at": "2025-04-19T06:37:04.000Z",
+        "last_updated_at": "2025-04-19T06:37:04.000Z",
+        "movie": {
+            "title": "The Illusionist",
+            "year": 2006,
+            "ids": {
+                "trakt": 985,
+                "slug": "the-illusionist-2006",
+                "imdb": "tt0443543",
+                "tmdb": 1491
+            }
+        }
+    },
+    {
+        "plays": 1,
         "last_watched_at": "2024-10-14T15:35:36.000Z",
         "last_updated_at": "2024-10-14T15:35:36.000Z",
         "movie": {
@@ -5911,6 +5926,21 @@
     },
     {
         "plays": 1,
+        "last_watched_at": "2025-04-18T11:36:07.000Z",
+        "last_updated_at": "2025-04-18T11:36:07.000Z",
+        "movie": {
+            "title": "The Magnificent Seven",
+            "year": 2016,
+            "ids": {
+                "trakt": 214415,
+                "slug": "the-magnificent-seven-2016",
+                "imdb": "tt2404435",
+                "tmdb": 333484
+            }
+        }
+    },
+    {
+        "plays": 1,
         "last_watched_at": "2024-09-04T18:59:06.000Z",
         "last_updated_at": "2024-09-04T18:59:06.000Z",
         "movie": {
@@ -8461,6 +8491,21 @@
     },
     {
         "plays": 1,
+        "last_watched_at": "2025-04-18T09:35:11.000Z",
+        "last_updated_at": "2025-04-18T09:35:12.000Z",
+        "movie": {
+            "title": "The Contractor",
+            "year": 2022,
+            "ids": {
+                "trakt": 469661,
+                "slug": "the-contractor-2022",
+                "imdb": "tt10323676",
+                "tmdb": 628900
+            }
+        }
+    },
+    {
+        "plays": 1,
         "last_watched_at": "2024-09-04T17:12:33.000Z",
         "last_updated_at": "2024-09-04T17:12:38.000Z",
         "movie": {
@@ -9341,6 +9386,21 @@
                 "slug": "memory-2022",
                 "imdb": "tt11827628",
                 "tmdb": 818397
+            }
+        }
+    },
+    {
+        "plays": 1,
+        "last_watched_at": "2025-04-14T12:15:53.000Z",
+        "last_updated_at": "2025-04-14T12:15:53.000Z",
+        "movie": {
+            "title": "Captain America: Brave New World",
+            "year": 2025,
+            "ids": {
+                "trakt": 655031,
+                "slug": "captain-america-brave-new-world-2025",
+                "imdb": "tt14513804",
+                "tmdb": 822119
             }
         }
     },
@@ -10376,6 +10436,21 @@
                 "slug": "bad-romance-the-vicky-white-story-2023",
                 "imdb": "tt29007231",
                 "tmdb": 1189796
+            }
+        }
+    },
+    {
+        "plays": 1,
+        "last_watched_at": "2025-04-17T20:28:11.000Z",
+        "last_updated_at": "2025-04-17T20:28:12.000Z",
+        "movie": {
+            "title": "A Working Man",
+            "year": 2025,
+            "ids": {
+                "trakt": 966319,
+                "slug": "a-working-man-2025",
+                "imdb": "tt9150192",
+                "tmdb": 1197306
             }
         }
     },
