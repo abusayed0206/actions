@@ -123,14 +123,17 @@ Zodiac,2007,tt0443706,1949
 The Butterfly Effect,2004,tt0289879,1954
 Lara Croft: Tomb Raider,2001,tt0146316,1995
 Lara Croft: Tomb Raider - The Cradle of Life,2003,tt0325703,1996
+"I, Robot",2004,tt0343818,2048
 X-Men Origins: Wolverine,2009,tt0458525,2080
 L.A. Confidential,1997,tt0119488,2118
 The Bourne Identity,2002,tt0258463,2501
 The Bourne Supremacy,2004,tt0372183,2502
 The Bourne Ultimatum,2007,tt0440963,2503
+Identity,2003,tt0309698,2832
 The Transporter,2002,tt0293662,4108
 Road to Perdition,2002,tt0257044,4147
 Panic Room,2002,tt0258000,4547
+The Machinist,2004,tt0361862,4553
 The Curious Case of Benjamin Button,2008,tt0421715,4922
 The Fugitive,1993,tt0106977,5503
 Pather Panchali,1955,tt0048473,5801
@@ -161,6 +164,7 @@ Wolf Creek,2005,tt0416315,9885
 Thor,2011,tt0800369,10195
 Yes Man,2008,tt1068680,10201
 War,2007,tt0499556,10431
+Sherlock Holmes,2009,tt0988045,10528
 Psycho II,1983,tt0086154,10576
 WALL·E,2008,tt0910970,10681
 The Client,1994,tt0109446,10731
@@ -212,6 +216,7 @@ Blade: Trinity,2004,tt0359013,36648
 X-Men,2000,tt0120903,36657
 X2,2003,tt0290334,36658
 X-Men: The Last Stand,2006,tt0376994,36668
+The Truman Show,1998,tt0120382,37165
 Skyfall,2012,tt1074638,37724
 The Social Network,2010,tt1285016,37799
 Transformers: Dark of the Moon,2011,tt1399103,38356
@@ -222,6 +227,7 @@ Don 2,2011,tt1285241,41109
 Ra.One,2011,tt1562871,41517
 The Next Three Days,2010,tt1458175,43539
 Unstoppable,2010,tt0477080,44048
+Black Swan,2010,tt0947798,44214
 The Grandmaster,2013,tt1462900,44865
 Dhoom 3,2013,tt1833673,44977
 Source Code,2011,tt0945513,45612
@@ -245,6 +251,7 @@ Underworld: Awakening,2012,tt1496025,52520
 Star Trek Into Darkness,2013,tt1408101,54138
 Blitz,2011,tt1297919,55846
 Mission: Impossible - Ghost Protocol,2011,tt1229238,56292
+Sherlock Holmes: A Game of Shadows,2011,tt1515091,58574
 Kick-Ass 2,2013,tt1650554,59859
 Safe House,2012,tt1599348,59961
 Abduction,2011,tt1600195,59965
@@ -327,6 +334,7 @@ Wolf Creek 2,2013,tt2004432,199534
 Homefront,2013,tt2312718,204082
 Chennai Express,2013,tt2112124,205022
 The Imitation Game,2014,tt2084970,205596
+Predestination,2014,tt2397535,206487
 Spectre,2015,tt2379713,206647
 Kingsman: The Secret Service,2015,tt2802144,207703
 The Fall,1999,tt0171308,207735
@@ -447,6 +455,7 @@ Godzilla vs. Kong,2021,tt5034838,399566
 Alita: Battle Angel,2019,tt0437086,399579
 The Arrival,2016,tt5623378,401867
 Sniper: Ghost Shooter,2016,tt5090828,407375
+Split,2017,tt4972582,381288
 No Time to Die,2021,tt2382320,370172
 Thupparivaalan,2017,tt7190460,410481
 Sicario: Day of the Soldado,2018,tt5052474,400535
@@ -529,6 +538,7 @@ Last Looks,2022,tt9244554,557946
 Gladiator II,2024,tt9218128,558449
 El Camino: A Breaking Bad Movie,2019,tt9243946,559969
 K.G.F: Chapter 1,2018,tt7838252,564147
+Tom Clancy's Without Remorse,2021,tt0499097,567189
 The Guilty,2021,tt9421570,567748
 Encanto,2021,tt2953050,568124
 Fractured,2019,tt4332232,568091
@@ -585,7 +595,7 @@ Vakeel Saab,2021,tt8269248,673732
 Garuda Gamana Vrishabha Vahana,2021,tt11953248,678466
 #Hacked,2014,tt4815766,352473
 Clean,2022,tt10023022,689700
-Pushpa: The Rise - Part 1,2021,tt9389998,690957
+Pushpa - The Rise,2021,tt9389998,690957
 Dune: Part Two,2024,tt15239678,693134
 The Adam Project,2022,tt2463208,696806
 Extraction 2,2023,tt12263384,697843
