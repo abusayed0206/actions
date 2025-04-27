@@ -1,0 +1,27 @@
+name: Cache Websites to Wayback Machine
+
+on:
+  schedule:
+    - cron: '47 5 * * 1' # Every Monday at 05:47 UTC
+  workflow_dispatch: # Manual trigger
+
+jobs:
+  archive:
+    runs-on: ubuntu-latest
+
+    steps:
+    - name: Checkout Repository
+      uses: actions/checkout@v4
+
+    - name: Set up Python
+      uses: actions/setup-python@v5
+      with:
+        python-version: '3.x'
+
+    - name: Install dependencies
+      run: |
+        pip install requests
+
+    - name: Run caching script
+      run: |
+        python scripts/cache_websites.py
