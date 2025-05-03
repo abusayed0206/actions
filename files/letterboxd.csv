@@ -27,6 +27,7 @@ Raiders of the Lost Ark,1981,tt0082971,85
 Gladiator,2000,tt0172495,98
 Léon: The Professional,1994,tt0110413,101
 Taxi Driver,1976,tt0075314,103
+Run Lola Run,1998,tt0130827,104
 Scarface,1983,tt0086250,111
 The Lord of the Rings: The Two Towers,2002,tt0167261,121
 The Lord of the Rings: The Return of the King,2003,tt0167260,122
@@ -92,6 +93,7 @@ Home Alone 2: Lost in New York,1992,tt0104431,772
 Se7en,1995,tt0114369,807
 Underworld: Evolution,2006,tt0401855,834
 The Mask,1994,tt0110475,854
+Total Recall,1990,tt0100802,861
 For a Few Dollars More,1965,tt0059578,938
 Heat,1995,tt0113277,949
 Mission: Impossible,1996,tt0117060,954
@@ -114,6 +116,7 @@ Copycat,1995,tt0112722,1710
 The Incredible Hulk,2008,tt0800080,1724
 Iron Man,2008,tt0371746,1726
 Captain America: The First Avenger,2011,tt0458339,1771
+The Devil's Advocate,1997,tt0118971,1813
 Transformers,2007,tt0418279,1858
 Pirates of the Caribbean: On Stranger Tides,2011,tt1298650,1865
 Hulk,2003,tt0286716,1927
@@ -129,12 +132,14 @@ L.A. Confidential,1997,tt0119488,2118
 The Bourne Identity,2002,tt0258463,2501
 The Bourne Supremacy,2004,tt0372183,2502
 The Bourne Ultimatum,2007,tt0440963,2503
+The Game,1997,tt0119174,2649
 Identity,2003,tt0309698,2832
 The Transporter,2002,tt0293662,4108
 Road to Perdition,2002,tt0257044,4147
 Panic Room,2002,tt0258000,4547
 The Machinist,2004,tt0361862,4553
 The Curious Case of Benjamin Button,2008,tt0421715,4922
+Chaos,2005,tt0402910,5289
 The Fugitive,1993,tt0106977,5503
 Pather Panchali,1955,tt0048473,5801
 No Country for Old Men,2007,tt0477348,6977
@@ -185,6 +190,7 @@ Angels & Demons,2009,tt0808151,13448
 Star Trek,2009,tt0796366,13475
 Fast & Furious,2009,tt1013752,13804
 Dhoom 2,2006,tt0441048,14194
+Brainscan,1994,tt0109327,14237
 Sniper 2,2002,tt0338450,14245
 Sniper 3,2004,tt0408196,14247
 Crank: High Voltage,2009,tt1121931,15092
@@ -257,6 +263,7 @@ Safe House,2012,tt1599348,59961
 Abduction,2011,tt1600195,59965
 Looper,2012,tt1276104,59967
 Colombiana,2011,tt1657507,62835
+Total Recall,2012,tt1386703,64635
 Drive,2011,tt0780504,64690
 The Girl with the Dragon Tattoo,2011,tt1568346,65754
 Django Unchained,2012,tt1853728,68718
@@ -272,6 +279,7 @@ The Double,2011,tt1646980,73499
 Killer Joe,2012,tt1726669,73567
 Bodyguard,2011,tt1729637,73582
 The Grey,2012,tt1601913,75174
+Oblivion,2013,tt1483013,75612
 Now You See Me,2013,tt1670345,75656
 Jack Reacher,2012,tt0790724,75780
 The Expendables 2,2012,tt1764651,76163
@@ -416,6 +424,7 @@ Fantastic Beasts: The Crimes of Grindelwald,2018,tt4123430,338952
 Fantastic Beasts: The Secrets of Dumbledore,2022,tt4123432,338953
 Tomb Raider,2018,tt1365519,338970
 Baby Driver,2017,tt3890160,339403
+Annihilation,2018,tt2798920,300668
 Nocturnal Animals,2016,tt4550098,340666
 I.T.,2016,tt2679552,340677
 All the Bright Places,2020,tt3907584,342470
