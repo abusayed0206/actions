@@ -2086,6 +2086,21 @@
     },
     {
         "plays": 1,
+        "last_watched_at": "2025-05-08T09:08:30.000Z",
+        "last_updated_at": "2025-05-08T09:08:30.000Z",
+        "movie": {
+            "title": "Hot Fuzz",
+            "year": 2007,
+            "ids": {
+                "trakt": 2724,
+                "slug": "hot-fuzz-2007",
+                "imdb": "tt0425112",
+                "tmdb": 4638
+            }
+        }
+    },
+    {
+        "plays": 1,
         "last_watched_at": "2023-10-14T09:51:30.000Z",
         "last_updated_at": "2023-10-14T09:51:30.000Z",
         "movie": {
@@ -2411,6 +2426,21 @@
                 "slug": "the-italian-job-2003",
                 "imdb": "tt0317740",
                 "tmdb": 9654
+            }
+        }
+    },
+    {
+        "plays": 1,
+        "last_watched_at": "2025-05-05T08:35:30.000Z",
+        "last_updated_at": "2025-05-05T08:35:30.000Z",
+        "movie": {
+            "title": "Children of Men",
+            "year": 2006,
+            "ids": {
+                "trakt": 4965,
+                "slug": "children-of-men-2006",
+                "imdb": "tt0206634",
+                "tmdb": 9693
             }
         }
     },
