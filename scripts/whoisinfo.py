@@ -44,14 +44,15 @@ def format_expiration_message(domain_info, domain):
     formatted_expiration_date = expiration_date.strftime('%d %B, %Y')
     formatted_expiration_time = expiration_date.strftime('%I:%M %p')  # 12-hour format with AM/PM
 
-    status_emoji = "✅ সব ঠিক আছে" if remaining_days > 0 else "🔥🚨 EXPIRED!"
+    status_emoji = "✅ Everything fine" if remaining_days > 0 else "🔥🚨 EXPIRED!"
 
-    # Add domain status
-    epp_status = domain_info.get("statuses", [])
-    if isinstance(epp_status, list):
-        epp_status = "\n".join([f"- {status}" for status in epp_status])
-    else:
-        epp_status = f"- {epp_status}"
+    # Extract EPP status URLs
+    epp_status_urls = []
+    for status in domain_info.get("statuses", []):
+        if isinstance(status, dict) and "url" in status:
+            epp_status_urls.append(status["url"])
+
+    epp_status_text = "\n".join([f"- {url}" for url in epp_status_urls]) if epp_status_urls else "- No EPP URLs found"
 
     message = (
         f"🌐 **{domain}**\n"
@@ -59,11 +60,12 @@ def format_expiration_message(domain_info, domain):
         f"⏳ **Expiration Date:** {formatted_expiration_date}\n"
         f"🕒 **Time:** {formatted_expiration_time} GMT+6\n"
         f"📆 **Remaining:** {remaining_days} days, {remaining_hours} hours\n"
-        f"🔒 **Domain Status:**\n{epp_status}\n"
+        f"🔒 **EPP Status:**\n{epp_status_text}\n"
         f"{status_emoji}"
     )
 
     return message
+
 
 def send_telegram_message(message, bot_token, chat_id):
     """Sends a message to a Telegram bot."""
