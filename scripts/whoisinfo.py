@@ -1,4 +1,3 @@
-import whois
 import datetime
 import requests
 import os
@@ -11,46 +10,35 @@ def get_dhaka_time():
     return datetime.datetime.now(dhaka_tz)
 
 def whois_lookup(domain):
-    """Fetches WHOIS information for a given domain."""
+    """Fetches WHOIS information from the RDAP API."""
     try:
-        domain_info = whois.whois(domain)
-        return domain_info
-    except whois.exceptions.WhoisError:
-        return None
-    except Exception as e:
-        print(f"An unexpected error occurred for {domain}: {e}")
+        response = requests.get(f"https://rdap.abusayed.dev/api/lookup/{domain}", timeout=10)
+        response.raise_for_status()
+        return response.json()
+    except requests.RequestException as e:
+        print(f"⚠️ Failed to fetch WHOIS info for {domain}: {e}")
         return None
 
 def format_expiration_message(domain_info, domain):
     """Formats the expiration information for a domain in Dhaka time (GMT+6)."""
-    if not domain_info or not hasattr(domain_info, 'expiration_date'):
+    if not domain_info or 'expiresOn' not in domain_info:
         return f"⚠️ {domain}: Could not retrieve expiration information."
 
-    expiration_date = domain_info.expiration_date
-    if isinstance(expiration_date, list):
-        expiration_date = expiration_date[0]
-
-    if not isinstance(expiration_date, datetime.datetime):
+    try:
+        expiration_date = datetime.datetime.strptime(domain_info["expiresOn"], "%a, %d %b %Y %H:%M:%S %Z")
+    except ValueError:
         return f"⚠️ {domain}: Invalid expiration date format."
 
     utc_tz = pytz.utc
     dhaka_tz = pytz.timezone('Asia/Dhaka')
     now_dhaka = get_dhaka_time()
 
-    # Convert expiration_date from UTC to Dhaka time
-    if expiration_date.tzinfo is None or expiration_date.tzinfo.utcoffset(expiration_date) is None:
-        expiration_date = utc_tz.localize(expiration_date).astimezone(dhaka_tz)
-    else:
-        expiration_date = expiration_date.astimezone(dhaka_tz)
-
+    expiration_date = utc_tz.localize(expiration_date).astimezone(dhaka_tz)
     remaining_time = expiration_date - now_dhaka
     remaining_days = remaining_time.days
     remaining_hours = remaining_time.seconds // 3600  # Convert seconds to hours
 
-    registrar = domain_info.registrar
-    if isinstance(registrar, list):
-        registrar = registrar[0]
-    registrar_name = registrar if isinstance(registrar, str) else "Unknown"
+    registrar_name = domain_info.get("registrar", "Unknown")
 
     # Expiration message with formatting
     formatted_expiration_date = expiration_date.strftime('%d %B, %Y')
@@ -58,10 +46,10 @@ def format_expiration_message(domain_info, domain):
 
     status_emoji = "✅ সব ঠিক আছে" if remaining_days > 0 else "🔥🚨 EXPIRED!"
 
-    # Add EPP status
-    epp_status = domain_info.status if hasattr(domain_info, 'status') else "Unknown"
+    # Add domain status
+    epp_status = domain_info.get("statuses", [])
     if isinstance(epp_status, list):
-        epp_status = "\n".join([f"- {status}" for status in epp_status]) #format the status.
+        epp_status = "\n".join([f"- {status}" for status in epp_status])
     else:
         epp_status = f"- {epp_status}"
 
