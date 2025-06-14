@@ -5243,7 +5243,7 @@
             "year": 1999,
             "ids": {
                 "trakt": 128908,
-                "slug": "the-fall-1999-02-01",
+                "slug": "the-fall-2000-01-25",
                 "imdb": "tt0171308",
                 "tmdb": 207735
             }
@@ -7204,11 +7204,11 @@
         "last_watched_at": "2023-01-04T16:19:00.000Z",
         "last_updated_at": "2023-01-04T16:19:00.000Z",
         "movie": {
-            "title": "Aynabaji",
+            "title": "Mirror Game",
             "year": 2016,
             "ids": {
                 "trakt": 264768,
-                "slug": "aynabaji-2016",
+                "slug": "mirror-game-2016",
                 "imdb": "tt5354160",
                 "tmdb": 418325
             }
