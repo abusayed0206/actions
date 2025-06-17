@@ -3,7 +3,7 @@ name: Cloudflare Pages Deploy
 on:
   workflow_dispatch:  # Manual trigger
   schedule:
-    - cron: '0 17 * * *'  # Runs daily at 17:00 UTC
+    - cron: '24 2 * * 0' 
 
 jobs:
   deploy:
