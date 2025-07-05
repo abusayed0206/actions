@@ -376,6 +376,36 @@
     },
     {
         "plays": 1,
+        "last_watched_at": "2025-07-05T06:04:47.000Z",
+        "last_updated_at": "2025-07-05T06:04:47.000Z",
+        "movie": {
+            "title": "Indiana Jones and the Temple of Doom",
+            "year": 1984,
+            "ids": {
+                "trakt": 56,
+                "slug": "indiana-jones-and-the-temple-of-doom-1984",
+                "imdb": "tt0087469",
+                "tmdb": 87
+            }
+        }
+    },
+    {
+        "plays": 1,
+        "last_watched_at": "2025-07-05T08:22:29.000Z",
+        "last_updated_at": "2025-07-05T08:22:29.000Z",
+        "movie": {
+            "title": "Indiana Jones and the Last Crusade",
+            "year": 1989,
+            "ids": {
+                "trakt": 58,
+                "slug": "indiana-jones-and-the-last-crusade-1989",
+                "imdb": "tt0097576",
+                "tmdb": 89
+            }
+        }
+    },
+    {
+        "plays": 1,
         "last_watched_at": "2024-10-30T11:12:20.000Z",
         "last_updated_at": "2024-10-30T11:12:20.000Z",
         "movie": {
@@ -536,6 +566,21 @@
                 "slug": "sin-city-2005",
                 "imdb": "tt0401792",
                 "tmdb": 187
+            }
+        }
+    },
+    {
+        "plays": 1,
+        "last_watched_at": "2025-07-05T14:31:24.000Z",
+        "last_updated_at": "2025-07-05T14:31:24.000Z",
+        "movie": {
+            "title": "Indiana Jones and the Kingdom of the Crystal Skull",
+            "year": 2008,
+            "ids": {
+                "trakt": 176,
+                "slug": "indiana-jones-and-the-kingdom-of-the-crystal-skull-2008",
+                "imdb": "tt0367882",
+                "tmdb": 217
             }
         }
     },
