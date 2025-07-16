@@ -12,7 +12,7 @@ def get_dhaka_time():
 def whois_lookup(domain):
     """Fetches WHOIS information from the RDAP API."""
     try:
-        response = requests.get(f"https://rdap.abusayed.dev/api/lookup/{domain}", timeout=10)
+        response = requests.get(f"https://rdap.sayed.app/api/lookup/{domain}", timeout=10)
         response.raise_for_status()
         return response.json()
     except requests.RequestException as e:
