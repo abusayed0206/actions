@@ -2416,6 +2416,21 @@
     },
     {
         "plays": 1,
+        "last_watched_at": "2025-07-23T07:28:26.000Z",
+        "last_updated_at": "2025-07-23T07:28:26.000Z",
+        "movie": {
+            "title": "Final Destination 2",
+            "year": 2003,
+            "ids": {
+                "trakt": 4650,
+                "slug": "final-destination-2-2003",
+                "imdb": "tt0309593",
+                "tmdb": 9358
+            }
+        }
+    },
+    {
+        "plays": 1,
         "last_watched_at": "2024-06-05T09:05:44.000Z",
         "last_updated_at": "2024-06-05T09:05:44.000Z",
         "movie": {
@@ -2426,6 +2441,21 @@
                 "slug": "man-on-fire-2004",
                 "imdb": "tt0328107",
                 "tmdb": 9509
+            }
+        }
+    },
+    {
+        "plays": 1,
+        "last_watched_at": "2020-07-10T06:43:00.000Z",
+        "last_updated_at": "2025-07-23T06:44:09.000Z",
+        "movie": {
+            "title": "Final Destination",
+            "year": 2000,
+            "ids": {
+                "trakt": 4810,
+                "slug": "final-destination-2000",
+                "imdb": "tt0195714",
+                "tmdb": 9532
             }
         }
     },
@@ -7276,6 +7306,21 @@
     },
     {
         "plays": 1,
+        "last_watched_at": "2025-07-25T06:10:33.000Z",
+        "last_updated_at": "2025-07-25T06:10:33.000Z",
+        "movie": {
+            "title": "Paddington 2",
+            "year": 2017,
+            "ids": {
+                "trakt": 266173,
+                "slug": "paddington-2-2017",
+                "imdb": "tt4468740",
+                "tmdb": 346648
+            }
+        }
+    },
+    {
+        "plays": 1,
         "last_watched_at": "2024-08-21T01:42:42.000Z",
         "last_updated_at": "2024-08-21T01:42:46.000Z",
         "movie": {
@@ -7661,6 +7706,21 @@
                 "slug": "joker-2019",
                 "imdb": "tt7286456",
                 "tmdb": 475557
+            }
+        }
+    },
+    {
+        "plays": 1,
+        "last_watched_at": "2025-07-24T19:55:41.000Z",
+        "last_updated_at": "2025-07-24T19:55:41.000Z",
+        "movie": {
+            "title": "The King's Man",
+            "year": 2021,
+            "ids": {
+                "trakt": 324048,
+                "slug": "the-king-s-man-2021",
+                "imdb": "tt6856242",
+                "tmdb": 476669
             }
         }
     },
@@ -8171,6 +8231,21 @@
                 "slug": "andhadhun-2018",
                 "imdb": "tt8108198",
                 "tmdb": 534780
+            }
+        }
+    },
+    {
+        "plays": 1,
+        "last_watched_at": "2025-07-22T18:13:06.000Z",
+        "last_updated_at": "2025-07-22T18:13:06.000Z",
+        "movie": {
+            "title": "Ballerina",
+            "year": 2025,
+            "ids": {
+                "trakt": 392717,
+                "slug": "ballerina-2025",
+                "imdb": "tt7181546",
+                "tmdb": 541671
             }
         }
     },
@@ -9211,6 +9286,21 @@
     },
     {
         "plays": 1,
+        "last_watched_at": "2025-07-24T12:14:25.000Z",
+        "last_updated_at": "2025-07-24T12:14:25.000Z",
+        "movie": {
+            "title": "Mickey 17",
+            "year": 2025,
+            "ids": {
+                "trakt": 540151,
+                "slug": "mickey-17-2025",
+                "imdb": "tt12299608",
+                "tmdb": 696506
+            }
+        }
+    },
+    {
+        "plays": 1,
         "last_watched_at": "2023-10-14T10:07:09.000Z",
         "last_updated_at": "2023-10-14T10:07:09.000Z",
         "movie": {
@@ -9856,6 +9946,21 @@
     },
     {
         "plays": 1,
+        "last_watched_at": "2025-07-25T15:37:07.000Z",
+        "last_updated_at": "2025-07-25T15:37:07.000Z",
+        "movie": {
+            "title": "The Old Guard 2",
+            "year": 2025,
+            "ids": {
+                "trakt": 675992,
+                "slug": "the-old-guard-2-2025",
+                "imdb": "tt14961624",
+                "tmdb": 846422
+            }
+        }
+    },
+    {
+        "plays": 1,
         "last_watched_at": "2022-09-30T16:00:00.000Z",
         "last_updated_at": "2022-09-30T16:00:00.000Z",
         "movie": {
@@ -9971,6 +10076,21 @@
                 "slug": "reptile-2023",
                 "imdb": "tt13274016",
                 "tmdb": 866463
+            }
+        }
+    },
+    {
+        "plays": 1,
+        "last_watched_at": "2025-07-23T20:40:42.000Z",
+        "last_updated_at": "2025-07-23T20:40:42.000Z",
+        "movie": {
+            "title": "The Accountant\u00b2",
+            "year": 2025,
+            "ids": {
+                "trakt": 696075,
+                "slug": "the-accountant-2025",
+                "imdb": "tt7068946",
+                "tmdb": 870028
             }
         }
     },
@@ -10381,6 +10501,21 @@
     },
     {
         "plays": 1,
+        "last_watched_at": "2025-07-23T11:40:00.000Z",
+        "last_updated_at": "2025-07-23T11:40:00.000Z",
+        "movie": {
+            "title": "Thunderbolts*",
+            "year": 2025,
+            "ids": {
+                "trakt": 792299,
+                "slug": "thunderbolts-2025",
+                "imdb": "tt20969586",
+                "tmdb": 986056
+            }
+        }
+    },
+    {
+        "plays": 1,
         "last_watched_at": "2023-05-26T16:00:00.000Z",
         "last_updated_at": "2024-08-10T14:08:50.000Z",
         "movie": {
@@ -10501,6 +10636,21 @@
     },
     {
         "plays": 1,
+        "last_watched_at": "2025-07-23T15:30:42.000Z",
+        "last_updated_at": "2025-07-23T15:30:43.000Z",
+        "movie": {
+            "title": "Selena Gomez: My Mind & Me",
+            "year": 2022,
+            "ids": {
+                "trakt": 821861,
+                "slug": "selena-gomez-my-mind-me-2022",
+                "imdb": "tt21819250",
+                "tmdb": 1022256
+            }
+        }
+    },
+    {
+        "plays": 1,
         "last_watched_at": "2023-10-14T10:04:29.000Z",
         "last_updated_at": "2023-10-14T10:04:29.000Z",
         "movie": {
@@ -10616,6 +10766,21 @@
                 "slug": "the-count-of-monte-cristo-2024",
                 "imdb": "tt26446278",
                 "tmdb": 1084736
+            }
+        }
+    },
+    {
+        "plays": 1,
+        "last_watched_at": "2025-07-22T15:09:10.000Z",
+        "last_updated_at": "2025-07-22T15:09:10.000Z",
+        "movie": {
+            "title": "The Amateur",
+            "year": 2025,
+            "ids": {
+                "trakt": 874192,
+                "slug": "the-amateur-2025",
+                "imdb": "tt0899043",
+                "tmdb": 1087891
             }
         }
     },
@@ -10936,8 +11101,8 @@
     },
     {
         "plays": 1,
-        "last_watched_at": "2025-02-21T09:14:33.000Z",
-        "last_updated_at": "2025-02-21T09:14:33.000Z",
+        "last_watched_at": "2025-03-09T20:02:00.000Z",
+        "last_updated_at": "2025-07-23T20:03:12.000Z",
         "movie": {
             "title": "Shohorer Bou",
             "year": 2005,
