@@ -32,11 +32,26 @@ def send_pdf_to_telegram(pdf_url, caption):
     return response.ok
 
 def main():
-    with open('scholarship.htm', encoding='utf-8') as f:
-        soup = BeautifulSoup(f, 'html.parser')
+
+    url = 'https://shed.gov.bd/site/view/scholarship/%E0%A6%B6%E0%A6%BF%E0%A6%95%E0%A7%8D%E0%A6%B7%E0%A6%BE%E0%A6%AC%E0%A7%83%E0%A6%A4%E0%A7%8D%E0%A6%A4%E0%A6%BF-%E0%A6%AC%E0%A6%BF%E0%A6%9C%E0%A7%8D%E0%A6%9E%E0%A6%AA%E0%A7%8D%E0%A6%A4%E0%A6%BF'
+    try:
+        response = requests.get(url, timeout=30)
+        response.raise_for_status()
+        soup = BeautifulSoup(response.text, 'html.parser')
+    except Exception as e:
+        print(f"[ERROR] Failed to fetch the page: {url} - {e}")
+        return
 
     table = soup.find('table', class_='bordered')
-    rows = table.find('tbody').find_all('tr')
+    if not table:
+        print('[ERROR] Scholarship table not found on the page.')
+        return
+    tbody = table.find('tbody')
+    from bs4.element import Tag
+    if not tbody or not isinstance(tbody, Tag):
+        print('[ERROR] Table body (tbody) not found or is not a valid tag.')
+        return
+    rows = tbody.find_all('tr')
     sent_notices = load_sent_notices()
     today = datetime.today().date()
     found_today = False
