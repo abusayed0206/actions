@@ -8926,6 +8926,21 @@
     },
     {
         "plays": 1,
+        "last_watched_at": "2025-08-26T16:44:29.000Z",
+        "last_updated_at": "2025-08-26T16:44:29.000Z",
+        "movie": {
+            "title": "Foxter and Max",
+            "year": 2019,
+            "ids": {
+                "trakt": 455087,
+                "slug": "foxter-and-max-2019",
+                "imdb": "tt8269856",
+                "tmdb": 611014
+            }
+        }
+    },
+    {
+        "plays": 1,
         "last_watched_at": "2024-05-29T09:22:34.000Z",
         "last_updated_at": "2024-05-29T09:22:34.000Z",
         "movie": {
@@ -10451,6 +10466,21 @@
                 "slug": "thunivu-2023",
                 "imdb": "tt15163652",
                 "tmdb": 904557
+            }
+        }
+    },
+    {
+        "plays": 1,
+        "last_watched_at": "2025-08-28T08:49:39.000Z",
+        "last_updated_at": "2025-08-28T08:49:41.000Z",
+        "movie": {
+            "title": "F1",
+            "year": 2025,
+            "ids": {
+                "trakt": 729817,
+                "slug": "f1-2025",
+                "imdb": "tt16311594",
+                "tmdb": 911430
             }
         }
     },
