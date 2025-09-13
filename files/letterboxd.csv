@@ -84,6 +84,7 @@ Harry Potter and the Chamber of Secrets,2002,tt0295297,672
 Harry Potter and the Prisoner of Azkaban,2004,tt0304141,673
 Harry Potter and the Goblet of Fire,2005,tt0330373,674
 Harry Potter and the Order of the Phoenix,2007,tt0373889,675
+Aliens,1986,tt0090605,679
 Pulp Fiction,1994,tt0110912,680
 The Shining,1980,tt0081505,694
 Top Gun,1986,tt0092099,744
@@ -215,6 +216,7 @@ Pandorum,2009,tt1188729,19898
 3 Idiots,2009,tt1187043,20453
 The Book of Eli,2010,tt1037705,20504
 Orphan,2009,tt1148204,21208
+Ninja Assassin,2009,tt1186367,22832
 Takers,2010,tt1135084,22907
 Kick-Ass,2010,tt1250777,23483
 The Avengers,2012,tt0848228,24428
@@ -285,6 +287,7 @@ The Hunger Games,2012,tt1392170,70160
 Haywire,2011,tt1506999,70435
 Headhunters,2011,tt1614989,70670
 The Hunter,2011,tt1703148,70954
+Prometheus,2012,tt1446714,70981
 Resident Evil: Retribution,2012,tt1855325,71679
 World War Z,2013,tt0816711,72190
 G.I. Joe: Retaliation,2013,tt1583421,72559
@@ -308,6 +311,7 @@ Fast & Furious 6,2013,tt1905041,82992
 Ek Tha Tiger,2012,tt2016894,85985
 Talaash,2012,tt1787988,86004
 Terminator Genisys,2015,tt1340138,87101
+Flight,2012,tt1907668,87502
 Transformers: Age of Extinction,2014,tt2109248,91314
 Dipu Number 2,1996,tt1935109,93527
 Amar Bondhu Rashed,2011,tt1918969,93529
@@ -331,6 +335,7 @@ Olympus Has Fallen,2013,tt2302755,117263
 Guardians of the Galaxy,2014,tt2015381,118340
 Parker,2013,tt1904996,119283
 Assassin's Creed,2016,tt2094766,121856
+Alien: Covenant,2017,tt2316204,126889
 X-Men: Days of Future Past,2014,tt1877832,127585
 Edge of Tomorrow,2014,tt1631867,137113
 The Expendables 3,2014,tt2333784,138103
@@ -342,8 +347,10 @@ Dabangg 2,2012,tt2112131,147405
 Blue Is the Warmest Color,2013,tt2278871,152584
 All Is Lost,2013,tt2017038,152747
 The Equalizer,2014,tt0455944,156022
+Transcendence,2014,tt2209764,157353
 A Single Shot,2013,tt1540741,159932
 Pirates of the Caribbean: Dead Men Tell No Tales,2017,tt1790809,166426
+Bullet,2014,tt2544734,169298
 Resident Evil: The Final Chapter,2016,tt2592614,173897
 Mission: Impossible - Rogue Nation,2015,tt2381249,177677
 The Raid 2,2014,tt2265171,180299
@@ -423,6 +430,7 @@ Jason Bourne,2016,tt4196776,324668
 Arrival,2016,tt2543164,329865
 Cosmic Sex,2015,tt4566934,330141
 Frozen II,2019,tt4520988,330457
+Rogue One: A Star Wars Story,2016,tt3748528,330459
 Hacksaw Ridge,2016,tt2119532,324786
 Absolution,2015,tt3503840,332976
 The Magnificent Seven,2016,tt2404435,333484
@@ -443,6 +451,7 @@ Annihilation,2018,tt2798920,300668
 Nocturnal Animals,2016,tt4550098,340666
 I.T.,2016,tt2679552,340677
 All the Bright Places,2020,tt3907584,342470
+Solo: A Star Wars Story,2018,tt3778644,348350
 Bajrangi Bhaijaan,2015,tt3863552,348892
 Mission: Impossible - Fallout,2018,tt4912910,353081
 Jumanji: Welcome to the Jungle,2017,tt2283362,353486
@@ -628,7 +637,7 @@ Garuda Gamana Vrishabha Vahana,2021,tt11953248,678466
 HIT: The First Case,2020,tt11490170,678391
 #Hacked,2014,tt4815766,352473
 Clean,2022,tt10023022,689700
-Pushpa - The Rise,2021,tt9389998,690957
+Pushpa: The Rise,2021,tt9389998,690957
 Dune: Part Two,2024,tt15239678,693134
 Mickey 17,2025,tt12299608,696506
 The Adam Project,2022,tt2463208,696806
@@ -706,6 +715,7 @@ I Am Mortal,2021,tt6385680,919269
 Murder At Teesri Manzil 302,2021,tt16750728,921403
 Karnasubarner Guptodhon,2022,tt22336444,921662
 The Substance,2024,tt17526714,933260
+57 Seconds,2023,tt18083578,937249
 The Takeover,2022,tt18082758,944864
 Leo,2023,tt15654328,949229
 Jaane Jaan,2023,tt15748830,950071
