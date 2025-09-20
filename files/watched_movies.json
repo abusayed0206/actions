@@ -2266,6 +2266,21 @@
     },
     {
         "plays": 1,
+        "last_watched_at": "2025-09-18T15:06:12.000Z",
+        "last_updated_at": "2025-09-18T15:06:12.000Z",
+        "movie": {
+            "title": "The Punisher",
+            "year": 2004,
+            "ids": {
+                "trakt": 3843,
+                "slug": "the-punisher-2004",
+                "imdb": "tt0330793",
+                "tmdb": 7220
+            }
+        }
+    },
+    {
+        "plays": 1,
         "last_watched_at": "2025-01-16T11:08:31.000Z",
         "last_updated_at": "2025-01-16T11:08:31.000Z",
         "movie": {
@@ -2626,6 +2641,21 @@
     },
     {
         "plays": 1,
+        "last_watched_at": "2025-09-19T21:18:20.000Z",
+        "last_updated_at": "2025-09-19T21:18:20.000Z",
+        "movie": {
+            "title": "Cellular",
+            "year": 2004,
+            "ids": {
+                "trakt": 5020,
+                "slug": "cellular-2004",
+                "imdb": "tt0337921",
+                "tmdb": 9759
+            }
+        }
+    },
+    {
+        "plays": 1,
         "last_watched_at": "2025-01-15T12:17:22.000Z",
         "last_updated_at": "2025-01-15T12:17:22.000Z",
         "movie": {
@@ -2936,6 +2966,21 @@
                 "slug": "eagle-eye-2008",
                 "imdb": "tt1059786",
                 "tmdb": 13027
+            }
+        }
+    },
+    {
+        "plays": 1,
+        "last_watched_at": "2025-09-19T22:54:20.000Z",
+        "last_updated_at": "2025-09-19T22:54:20.000Z",
+        "movie": {
+            "title": "Punisher: War Zone",
+            "year": 2008,
+            "ids": {
+                "trakt": 7612,
+                "slug": "punisher-war-zone-2008",
+                "imdb": "tt0450314",
+                "tmdb": 13056
             }
         }
     },
@@ -5231,6 +5276,21 @@
                 "slug": "transcendence-2014",
                 "imdb": "tt2209764",
                 "tmdb": 157353
+            }
+        }
+    },
+    {
+        "plays": 1,
+        "last_watched_at": "2025-09-17T20:24:43.000Z",
+        "last_updated_at": "2025-09-17T20:24:43.000Z",
+        "movie": {
+            "title": "Redemption",
+            "year": 2013,
+            "ids": {
+                "trakt": 102705,
+                "slug": "redemption-2013-04-05",
+                "imdb": "tt2201886",
+                "tmdb": 158394
             }
         }
     },
