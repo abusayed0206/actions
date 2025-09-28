@@ -92,6 +92,7 @@ def main():
         "niralok.com",
         "pothik.app",
         "nextvisionengineering.com",
+        "nayem.page"
     ]
 
     bot_token = os.environ.get("TELEGRAM_BOT_TOKEN")
