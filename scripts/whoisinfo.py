@@ -89,9 +89,6 @@ def main():
         "sayed.page",
         "sayed.app",
         "abusayed.dev",
-        "niralok.com",
-        "pothik.app",
-        "nextvisionengineering.com",
         "nayem.page"
     ]
 
