@@ -12,48 +12,102 @@ def get_dhaka_time():
 def whois_lookup(domain):
     """Fetches WHOIS information from the RDAP API."""
     try:
-        response = requests.get(f"https://rdap.sayed.app/api/lookup/{domain}", timeout=10)
+        headers = {
+            "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36",
+            "Accept": "application/json"
+        }
+        response = requests.get(
+            f"https://rdap.sayed.app/api/lookup/{domain}",
+            timeout=15,
+            headers=headers
+        )
+        print(f"🔎 {domain}: HTTP {response.status_code}")
         response.raise_for_status()
-        return response.json()
+        data = response.json()
+        print(f"✅ {domain}: Got response with keys: {list(data.keys())}")
+        return data
     except requests.RequestException as e:
         print(f"⚠️ Failed to fetch WHOIS info for {domain}: {e}")
         return None
 
+def parse_expiration_date(raw_date_str):
+    """
+    Parse expiration date from RDAP response.
+    Handles format: "Tue, 12 Jan 2027 14:17:50 GMT"
+    """
+    if not raw_date_str:
+        return None
+    
+    try:
+        # Remove " GMT" at the end since %Z doesn't parse it reliably
+        clean_date = raw_date_str.replace(" GMT", "").strip()
+        
+        # Parse the date: "Tue, 12 Jan 2027 14:17:50"
+        expiration_date = datetime.datetime.strptime(clean_date, "%a, %d %b %Y %H:%M:%S")
+        
+        # Localize to UTC (RDAP returns UTC times)
+        expiration_date = pytz.utc.localize(expiration_date)
+        
+        return expiration_date
+    except ValueError as e:
+        print(f"❌ Date parsing failed for '{raw_date_str}': {e}")
+        return None
+
 def format_expiration_message(domain_info, domain):
     """Formats the expiration information for a domain in Dhaka time (GMT+6)."""
-    if not domain_info or 'expiresOn' not in domain_info:
+    
+    # Check if we got a valid response
+    if not domain_info:
+        return f"⚠️ {domain}: API lookup failed - no data returned"
+    
+    # Check if expiresOn field exists
+    if 'expiresOn' not in domain_info:
+        print(f"⚠️ {domain}: Missing 'expiresOn' field. Response keys: {list(domain_info.keys())}")
         return f"⚠️ {domain}: Could not retrieve expiration information."
-
-    try:
-        expiration_date = datetime.datetime.strptime(domain_info["expiresOn"], "%a, %d %b %Y %H:%M:%S %Z")
-    except ValueError:
-        return f"⚠️ {domain}: Invalid expiration date format."
-
-    utc_tz = pytz.utc
+    
+    # Parse the expiration date
+    raw_expires = domain_info.get("expiresOn")
+    print(f"📅 {domain}: Raw expiresOn = {raw_expires}")
+    
+    expiration_date = parse_expiration_date(raw_expires)
+    
+    if expiration_date is None:
+        return f"⚠️ {domain}: Invalid expiration date format - {raw_expires}"
+    
+    # Get current time in Dhaka timezone
     dhaka_tz = pytz.timezone('Asia/Dhaka')
     now_dhaka = get_dhaka_time()
-
-    expiration_date = utc_tz.localize(expiration_date).astimezone(dhaka_tz)
-    remaining_time = expiration_date - now_dhaka
+    
+    # Convert expiration date to Dhaka timezone
+    expiration_date_dhaka = expiration_date.astimezone(dhaka_tz)
+    
+    # Calculate remaining time
+    remaining_time = expiration_date_dhaka - now_dhaka
     remaining_days = remaining_time.days
     remaining_hours = remaining_time.seconds // 3600  # Convert seconds to hours
-
+    
+    # Get registrar name
     registrar_name = domain_info.get("registrar", "Unknown")
-
-    # Expiration message with formatting
-    formatted_expiration_date = expiration_date.strftime('%d %B, %Y')
-    formatted_expiration_time = expiration_date.strftime('%I:%M %p')  # 12-hour format with AM/PM
-
-    status_emoji = "✅ Everything fine" if remaining_days > 0 else "🔥🚨 EXPIRED!"
-
+    
+    # Format dates for display
+    formatted_expiration_date = expiration_date_dhaka.strftime('%d %B, %Y')
+    formatted_expiration_time = expiration_date_dhaka.strftime('%I:%M %p')  # 12-hour format with AM/PM
+    
+    # Status emoji based on remaining time
+    if remaining_time.total_seconds() > 0:
+        status_emoji = "✅ Everything fine"
+    else:
+        status_emoji = "🔥🚨 EXPIRED!"
+    
     # Extract EPP status URLs
     epp_status_urls = []
     for status in domain_info.get("statuses", []):
         if isinstance(status, dict) and "url" in status:
             epp_status_urls.append(status["url"])
-
+    
     epp_status_text = "\n".join([f"- {url}" for url in epp_status_urls]) if epp_status_urls else "- No EPP URLs found"
-
+    
+    # Format the message
     message = (
         f"🌐 **{domain}**\n"
         f"🏢 **Registrar:** {registrar_name}\n"
@@ -63,9 +117,8 @@ def format_expiration_message(domain_info, domain):
         f"🔒 **EPP Status:**\n{epp_status_text}\n"
         f"{status_emoji}"
     )
-
+    
     return message
-
 
 def send_telegram_message(message, bot_token, chat_id):
     """Sends a message to a Telegram bot."""
@@ -76,7 +129,7 @@ def send_telegram_message(message, bot_token, chat_id):
         "parse_mode": "Markdown"
     }
     try:
-        response = requests.post(url, json=payload)
+        response = requests.post(url, json=payload, timeout=10)
         response.raise_for_status()
         print("✅ Telegram message sent successfully.")
     except requests.exceptions.RequestException as e:
@@ -99,11 +152,32 @@ def main():
         print("⚠️ Telegram bot token or chat ID not found in environment variables.")
         return
 
-    for domain in domains:
+    print(f"🚀 Starting domain expiration check at {get_dhaka_time()}\n")
+
+    for i, domain in enumerate(domains, 1):
+        print(f"\n{'='*60}")
+        print(f"[{i}/{len(domains)}] Processing: {domain}")
+        print(f"{'='*60}")
+        
+        # Add delay before API call to avoid rate limiting
+        if i > 1:
+            time.sleep(2)
+        
+        # Fetch WHOIS data
         domain_info = whois_lookup(domain)
+        
+        # Format message
         message = format_expiration_message(domain_info, domain)
+        
+        # Send to Telegram
+        print(f"✉️ Sending to Telegram...")
         send_telegram_message(message, bot_token, chat_id)
-        time.sleep(3)  # Delay of 3 seconds between messages
+        
+        # Small delay between Telegram messages
+        time.sleep(1)
+
+    print(f"\n✅ All domains processed!")
 
 if __name__ == "__main__":
     main()
+    
