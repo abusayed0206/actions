@@ -8,7 +8,7 @@ on:
 
 jobs:
   post-spotlight:
-    runs-on: windows-latest  # Use Windows runner
+    runs-on: ubuntu-latest 
     
     steps:
     - name: Checkout repository
