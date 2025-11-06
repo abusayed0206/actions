@@ -124,26 +124,61 @@ def send_images_to_telegram(bot_token, chat_id, images_data):
     
     url = f"https://api.telegram.org/bot{bot_token}/sendMediaGroup"
     
-    # Create a single caption with all image details
-    caption = "🖼️ <b>Windows Spotlight Images</b>\n\n"
+    # Build caption with image details
+    header = "🖼️ <b>Windows Spotlight Images</b>\n\n"
+    caption = header
     
+    # Add images one by one and check length
+    image_parts = []
     for img_data in images_data:
         image_info = img_data['info']
-        caption += f"📸 <b>#{image_info['index']}: {image_info['title']}</b>\n"
-        caption += f"📷 {image_info['copyright']}\n\n"
+        img_text = f"📸 <b>#{image_info['index']}: {image_info['title']}</b>\n📷 {image_info['copyright']}\n\n"
+        image_parts.append(img_text)
+        caption += img_text
     
-    # Add region info
-    caption += f"🌍 Region: {images_data[0]['info']['country']} ({images_data[0]['info']['locale']})\n"
+    # Prepare footer
+    region_text = f"🌍 Region: {images_data[0]['info']['country']} ({images_data[0]['info']['locale']})"
+    hashtags = "\n#WindowsSpotlight #Spotlight #Wallpaper #Microsoft #Photography"
+    footer = region_text + hashtags
     
-    # Create links for all images using wsrv.nl proxy
-    links = []
-    for idx, img_data in enumerate(images_data, 1):
-        image_url = img_data['info']['url']
-        wsrv_url = f"https://wsrv.nl/?url={image_url}"
-        links.append(f"<a href='{wsrv_url}'>Link{idx}</a>")
+    # Smart split: Check if we need to split
+    total_with_footer = len(caption + footer)
     
-    caption += f"🔗 {' | '.join(links)}\n"
-    caption += f"\n#WindowsSpotlight #Spotlight #Wallpaper #Microsoft #Photography"
+    if total_with_footer <= 300:
+        # Everything fits in 300 chars
+        caption += footer
+        print(f"📝 Caption length: {len(caption)} characters (single caption)")
+    else:
+        # Need to split intelligently
+        # Find the best split point - after which image to split
+        temp_caption = header
+        split_point = 0
+        
+        for idx, img_part in enumerate(image_parts):
+            test_caption = temp_caption + img_part
+            if len(test_caption) < 290:  # Keep adding if under 290
+                temp_caption = test_caption
+                split_point = idx + 1
+            else:
+                break
+        
+        # First caption: header + images up to split point
+        caption = header
+        for i in range(split_point):
+            caption += image_parts[i]
+        
+        # Pad to push content to next line (use invisible characters)
+        remaining_space = 300 - len(caption)
+        if remaining_space > 10:
+            caption += " " * 10  # Add 10 spaces
+            remaining_space -= 10
+        
+        # Add remaining images and footer in "hidden" section after 300 chars
+        for i in range(split_point, len(image_parts)):
+            caption += image_parts[i]
+        caption += footer
+        
+        print(f"📝 Caption length: {len(caption)} characters (smart split at image #{split_point})")
     
     # Prepare media group (up to 10 images, but we have max 4)
     media = []
