@@ -131,12 +131,17 @@ def send_to_telegram(bot_token, chat_id, images_data):
         caption += f"📸 <b>#{image_info['index']}: {image_info['title']}</b>\n"
         caption += f"📷 {image_info['copyright']}\n\n"
     
-    # Use wsrv.nl proxy for the first image URL
-    first_image_url = images_data[0]['info']['url']
-    wsrv_url = f"https://wsrv.nl/?url={first_image_url}"
-    
+    # Add region info
     caption += f"🌍 Region: {images_data[0]['info']['country']} ({images_data[0]['info']['locale']})\n"
-    caption += f"🔗 <a href='{wsrv_url}'>Image Link</a>\n"
+    
+    # Create links for all images using wsrv.nl proxy
+    links = []
+    for idx, img_data in enumerate(images_data, 1):
+        image_url = img_data['info']['url']
+        wsrv_url = f"https://wsrv.nl/?url={image_url}"
+        links.append(f"<a href='{wsrv_url}'>Link{idx}</a>")
+    
+    caption += f"🔗 {' | '.join(links)}\n"
     caption += f"\n#WindowsLockScreen #LockScreen #Wallpaper #Microsoft #Photography"
     
     # Prepare media group (up to 10 images, but we have max 4)
