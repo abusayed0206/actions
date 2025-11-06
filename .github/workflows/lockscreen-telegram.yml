@@ -1,0 +1,33 @@
+name: Windows LockScreen to Telegram
+
+on:
+  schedule:
+    # Runs at 2:29 AM GMT+6 (which is 8:29 PM UTC previous day)
+    - cron: '29 20 * * *'
+  workflow_dispatch: # Allows manual trigger
+
+jobs:
+  post-lockscreen:
+    runs-on: windows-latest  # Use Windows runner
+    
+    steps:
+    - name: Checkout repository
+      uses: actions/checkout@v4
+    
+    - name: Set up Python
+      uses: actions/setup-python@v5
+      with:
+        python-version: '3.11'
+        cache: 'pip'
+    
+    - name: Install dependencies
+      run: |
+        python -m pip install --upgrade pip
+        pip install requests
+    
+    - name: Fetch and post LockScreen image
+      env:
+        TELEGRAM_BOT_TOKEN: ${{ secrets.TELEGRAM_BOT_TOKEN }}
+        TG_CHAT_ID: ${{ secrets.TG_CHAT_ID }}
+      run: |
+        python scripts/lockscreen_telegram.py
