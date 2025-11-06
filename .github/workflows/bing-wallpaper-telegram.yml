@@ -15,19 +15,10 @@ jobs:
     - name: Checkout repository
       uses: actions/checkout@v4
     
-    - name: Set up Python
-      uses: actions/setup-python@v4
-      with:
-        python-version: '3.11'
-    
-    - name: Install dependencies
-      run: |
-        python -m pip install --upgrade pip
-        pip install requests
-    
     - name: Fetch and post Bing wallpaper
       env:
         TELEGRAM_BOT_TOKEN: ${{ secrets.TELEGRAM_BOT_TOKEN }}
         TG_CHAT_ID: ${{ secrets.TG_CHAT_ID }}
       run: |
-        python scripts/bing_wallpaper_telegram.py
+        chmod +x scripts/bing_wallpaper_telegram.sh
+        bash scripts/bing_wallpaper_telegram.sh
