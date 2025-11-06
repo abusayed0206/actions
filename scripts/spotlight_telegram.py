@@ -10,9 +10,9 @@ from datetime import datetime
 
 # Available locales for Spotlight
 LOCALES = [
-    ('US', 'en-US'), ('JP', 'ja-JP'), ('AU', 'en-AU'), ('GB', 'en-GB'), 
-    ('DE', 'de-DE'), ('NZ', 'en-NZ'), ('CA', 'en-CA'), ('IN', 'en-IN'), 
-    ('FR', 'fr-FR'), ('IT', 'it-IT'), ('ES', 'es-ES'), ('BR', 'pt-BR')
+    ('US', 'en-US'), ('JP', 'en-US'), ('AU', 'en-US'), ('GB', 'en-US'), 
+    ('DE', 'en-US'), ('NZ', 'en-US'), ('CA', 'en-US'), ('IN', 'en-US'), 
+    ('FR', 'en-US'), ('IT', 'en-US'), ('ES', 'en-US'), ('BR', 'en-US')
 ]
 
 def fetch_spotlight_images():
@@ -122,23 +122,28 @@ def send_images_to_telegram(bot_token, chat_id, images_data):
     """Send multiple images to Telegram as a media group"""
     url = f"https://api.telegram.org/bot{bot_token}/sendMediaGroup"
     
+    # Create a single caption with all image details
+    caption = "🖼️ <b>Windows Spotlight Images</b>\n\n"
+    
+    for img_data in images_data:
+        image_info = img_data['info']
+        caption += f"📸 <b>#{image_info['index']}: {image_info['title']}</b>\n"
+        caption += f"📷 {image_info['copyright']}\n\n"
+    
+    # Use wsrv.nl proxy for the first image URL
+    first_image_url = images_data[0]['info']['url']
+    wsrv_url = f"https://wsrv.nl/?url={first_image_url}"
+    
+    caption += f"🌍 Region: {images_data[0]['info']['country']} ({images_data[0]['info']['locale']})\n"
+    caption += f"🔗 <a href='{wsrv_url}'>Image Link</a>\n"
+    caption += f"\n#WindowsSpotlight #Spotlight #Wallpaper #Microsoft #Photography"
+    
     # Prepare media group (up to 10 images, but we have max 4)
     media = []
     files_dict = {}
     
     for idx, img_data in enumerate(images_data):
         image_content = img_data['content']
-        image_info = img_data['info']
-        
-        # Create caption for each image
-        caption = f"🖼️ <b>Windows Spotlight #{image_info['index']}</b>\n\n"
-        caption += f"📝 {image_info['title']}\n"
-        caption += f"📷 {image_info['copyright']}\n"
-        caption += f"🌍 {image_info['country']} ({image_info['locale']})"
-        
-        # Only first image gets caption in media group
-        if idx == 0:
-            caption += f"\n\n#WindowsSpotlight #Spotlight #Wallpaper #Microsoft"
         
         file_key = f"photo{idx}"
         files_dict[file_key] = (f'spotlight_{idx}.jpg', image_content, 'image/jpeg')
@@ -148,7 +153,7 @@ def send_images_to_telegram(bot_token, chat_id, images_data):
             'media': f'attach://{file_key}'
         }
         
-        if idx == 0:  # Add caption to first image
+        if idx == 0:  # Add caption to first image only
             media_item['caption'] = caption
             media_item['parse_mode'] = 'HTML'
         

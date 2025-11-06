@@ -10,20 +10,19 @@ from datetime import datetime
 
 # Available locales for LockScreen
 LOCALES = [
-    ('US', 'en-US'), ('JP', 'ja-JP'), ('AU', 'en-AU'), ('GB', 'en-GB'), 
-    ('DE', 'de-DE'), ('NZ', 'en-NZ'), ('CA', 'en-CA'), ('IN', 'en-IN'), 
-    ('FR', 'fr-FR'), ('IT', 'it-IT'), ('ES', 'es-ES'), ('BR', 'pt-BR')
+    ('US', 'en-US'), ('JP', 'en-US'), ('AU', 'en-US'), ('GB', 'en-US'), 
+    ('DE', 'en-US'), ('NZ', 'en-US'), ('CA', 'en-US'), ('IN', 'en-US'), 
+    ('FR', 'en-US'), ('IT', 'en-US'), ('ES', 'en-US'), ('BR', 'en-US')
 ]
 
 def fetch_lockscreen_image():
-    """Fetch LockScreen image from Microsoft API"""
+    """Fetch LockScreen images from Microsoft API (returns up to 4 images)"""
     # Select random locale
     country, locale = random.choice(LOCALES)
     print(f"🌍 Using country: {country}, locale: {locale}")
     
-    # Use Windows 11 Spotlight API v4 with bcnt=1 to get only one image
-    # This API works more reliably than v3
-    api_url = f"https://fd.api.iris.microsoft.com/v4/api/selection?placement=88000820&bcnt=1&country={country}&locale={locale}&fmt=json"
+    # Use Windows 11 Spotlight API v4 with bcnt=4 to get maximum images
+    api_url = f"https://fd.api.iris.microsoft.com/v4/api/selection?placement=88000820&bcnt=4&country={country}&locale={locale}&fmt=json"
     
     headers = {
         'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36',
@@ -35,42 +34,46 @@ def fetch_lockscreen_image():
         response.raise_for_status()
         data = response.json()
         
+        images = []
+        
         # Parse the response
         if 'batchrsp' in data and 'items' in data['batchrsp']:
             items = data['batchrsp']['items']
             
-            if len(items) > 0 and 'item' in items[0]:
-                # The 'item' field contains a JSON string, parse it
-                import json
-                item_json = json.loads(items[0]['item'])
-                
-                if 'ad' in item_json:
-                    ad_data = item_json['ad']
+            for idx, item in enumerate(items[:4]):  # Maximum 4 images
+                if 'item' in item:
+                    # The 'item' field contains a JSON string, parse it
+                    import json
+                    item_json = json.loads(item['item'])
                     
-                    # Get image URL - use the asset URL directly (already at max quality)
-                    image_url = ''
-                    if 'landscapeImage' in ad_data and 'asset' in ad_data['landscapeImage']:
-                        image_url = ad_data['landscapeImage']['asset']
-                    elif 'portraitImage' in ad_data and 'asset' in ad_data['portraitImage']:
-                        image_url = ad_data['portraitImage']['asset']
-                    
-                    if image_url:
-                        title = ad_data.get('title', 'N/A')
-                        copyright_text = ad_data.get('copyright', 'N/A')
+                    if 'ad' in item_json:
+                        ad_data = item_json['ad']
                         
-                        print(f"✅ Found LockScreen image")
-                        return {
-                            'url': image_url,
-                            'title': title,
-                            'copyright': copyright_text,
-                            'country': country,
-                            'locale': locale
-                        }
-                
-                print("❌ Error: No image URL found in API response")
-                sys.exit(1)
+                        # Get image URL - use the asset URL directly (already at max quality)
+                        image_url = ''
+                        if 'landscapeImage' in ad_data and 'asset' in ad_data['landscapeImage']:
+                            image_url = ad_data['landscapeImage']['asset']
+                        elif 'portraitImage' in ad_data and 'asset' in ad_data['portraitImage']:
+                            image_url = ad_data['portraitImage']['asset']
+                        
+                        if image_url:
+                            title = ad_data.get('title', 'N/A')
+                            copyright_text = ad_data.get('copyright', 'N/A')
+                            
+                            images.append({
+                                'url': image_url,
+                                'title': title,
+                                'copyright': copyright_text,
+                                'index': idx + 1,
+                                'country': country,
+                                'locale': locale
+                            })
+            
+            if images:
+                print(f"✅ Found {len(images)} LockScreen images")
+                return images
             else:
-                print("❌ Error: No items found in API response")
+                print("❌ Error: No images found in API response")
                 sys.exit(1)
         else:
             print("❌ Error: Invalid API response structure")
@@ -114,27 +117,59 @@ def download_image(image_url):
         print(f"❌ Error downloading image: {e}")
         sys.exit(1)
 
-def send_to_telegram(bot_token, chat_id, image_data, caption):
-    """Send image to Telegram"""
-    url = f"https://api.telegram.org/bot{bot_token}/sendPhoto"
+def send_to_telegram(bot_token, chat_id, images_data):
+    """Send multiple images to Telegram as a media group"""
+    url = f"https://api.telegram.org/bot{bot_token}/sendMediaGroup"
     
-    files = {
-        'photo': ('lockscreen.jpg', image_data, 'image/jpeg')
-    }
+    # Create a single caption with all image details
+    caption = "🔒 <b>Windows LockScreen Images</b>\n\n"
+    
+    for img_data in images_data:
+        image_info = img_data['info']
+        caption += f"📸 <b>#{image_info['index']}: {image_info['title']}</b>\n"
+        caption += f"📷 {image_info['copyright']}\n\n"
+    
+    # Use wsrv.nl proxy for the first image URL
+    first_image_url = images_data[0]['info']['url']
+    wsrv_url = f"https://wsrv.nl/?url={first_image_url}"
+    
+    caption += f"🌍 Region: {images_data[0]['info']['country']} ({images_data[0]['info']['locale']})\n"
+    caption += f"🔗 <a href='{wsrv_url}'>Image Link</a>\n"
+    caption += f"\n#WindowsLockScreen #LockScreen #Wallpaper #Microsoft #Photography"
+    
+    # Prepare media group (up to 10 images, but we have max 4)
+    media = []
+    files_dict = {}
+    
+    for idx, img_data in enumerate(images_data):
+        image_content = img_data['content']
+        
+        file_key = f"photo{idx}"
+        files_dict[file_key] = (f'lockscreen_{idx}.jpg', image_content, 'image/jpeg')
+        
+        media_item = {
+            'type': 'photo',
+            'media': f'attach://{file_key}'
+        }
+        
+        if idx == 0:  # Add caption to first image only
+            media_item['caption'] = caption
+            media_item['parse_mode'] = 'HTML'
+        
+        media.append(media_item)
     
     data = {
         'chat_id': chat_id,
-        'caption': caption,
-        'parse_mode': 'HTML'
+        'media': str(media).replace("'", '"')  # Convert to JSON string
     }
     
     try:
-        response = requests.post(url, files=files, data=data, timeout=60)
+        response = requests.post(url, files=files_dict, data=data, timeout=90)
         response.raise_for_status()
         result = response.json()
         
         if result.get('ok'):
-            print("✅ Image successfully posted to Telegram!")
+            print(f"✅ Successfully posted {len(images_data)} images to Telegram!")
             return True
         else:
             print(f"❌ Telegram API error: {result}")
@@ -151,12 +186,15 @@ def create_caption(data):
     country = data.get('country', 'N/A')
     locale = data.get('locale', 'N/A')
     
+    # Use wsrv.nl as proxy for the image URL
+    wsrv_url = f"https://wsrv.nl/?url={image_url}"
+    
     # Create caption with HTML formatting
     caption = f"🔒 <b>Windows LockScreen</b>\n\n"
     caption += f"📝 {title}\n"
     caption += f"📷 {copyright_text}\n"
     caption += f"🌍 {country} ({locale})\n"
-    caption += f"🔗 <a href='{image_url}'>Image Link</a>\n"
+    caption += f"🔗 <a href='{wsrv_url}'>Image Link</a>\n"
     caption += f"\n#WindowsLockScreen #LockScreen #Wallpaper #Microsoft"
     
     return caption
@@ -171,20 +209,27 @@ def main():
         print("❌ Error: TELEGRAM_BOT_TOKEN and TG_CHAT_ID must be set")
         sys.exit(1)
     
-    print("🔍 Fetching Windows LockScreen image...")
-    lockscreen_data = fetch_lockscreen_image()
+    print("🔍 Fetching Windows LockScreen images...")
+    lockscreen_images = fetch_lockscreen_image()
     
-    print(f"📥 Found image: {lockscreen_data.get('title')}")
+    # Download all images
+    images_data = []
+    for img_info in lockscreen_images:
+        print(f"⬇️ Downloading image #{img_info['index']}: {img_info['title'][:50]}...")
+        content = download_image(img_info['url'])
+        if content:
+            print(f"✅ Downloaded {len(content)} bytes")
+            images_data.append({
+                'content': content,
+                'info': img_info
+            })
     
-    print("⬇️ Downloading image...")
-    image_data = download_image(lockscreen_data['url'])
-    print(f"✅ Downloaded {len(image_data)} bytes")
+    if not images_data:
+        print("❌ Error: No images were downloaded successfully")
+        sys.exit(1)
     
-    print("📝 Creating caption...")
-    caption = create_caption(lockscreen_data)
-    
-    print("📤 Sending to Telegram...")
-    send_to_telegram(bot_token, chat_id, image_data, caption)
+    print(f"📤 Sending {len(images_data)} images to Telegram...")
+    send_to_telegram(bot_token, chat_id, images_data)
     
     print("🎉 Done!")
 
