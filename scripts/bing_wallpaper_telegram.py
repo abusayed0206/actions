@@ -11,8 +11,16 @@ def fetch_bing_image():
     """Fetch image info from Bing API"""
     api_url = "https://bing.biturl.top/?resolution=UHD&format=json&index=0&mkt=random"
     
+    # Add headers to avoid 403 Forbidden
+    headers = {
+        'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36',
+        'Accept': 'application/json, text/plain, */*',
+        'Accept-Language': 'en-US,en;q=0.9',
+        'Referer': 'https://bing.biturl.top/'
+    }
+    
     try:
-        response = requests.get(api_url, timeout=30)
+        response = requests.get(api_url, headers=headers, timeout=30)
         response.raise_for_status()
         data = response.json()
         return data
@@ -22,8 +30,12 @@ def fetch_bing_image():
 
 def download_image(image_url):
     """Download the image from URL"""
+    headers = {
+        'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36'
+    }
+    
     try:
-        response = requests.get(image_url, timeout=60)
+        response = requests.get(image_url, headers=headers, timeout=60)
         response.raise_for_status()
         return response.content
     except Exception as e:
