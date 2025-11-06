@@ -3,7 +3,7 @@ name: Windows Spotlight to Telegram
 on:
   schedule:
     # Runs at 2:30 am GMT+6 (which is 12:10 PM UTC)
-    - cron: '30 20 * * *'
+    - cron: '40 20 * * *'
   workflow_dispatch: # Allows manual trigger
 
 jobs:
