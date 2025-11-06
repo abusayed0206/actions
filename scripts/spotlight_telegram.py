@@ -120,6 +120,8 @@ def download_image(image_url):
 
 def send_images_to_telegram(bot_token, chat_id, images_data):
     """Send multiple images to Telegram as a media group"""
+    import json
+    
     url = f"https://api.telegram.org/bot{bot_token}/sendMediaGroup"
     
     # Create a single caption with all image details
@@ -161,7 +163,7 @@ def send_images_to_telegram(bot_token, chat_id, images_data):
     
     data = {
         'chat_id': chat_id,
-        'media': str(media).replace("'", '"')  # Convert to JSON string
+        'media': json.dumps(media)  # Properly JSON-encode the media array
     }
     
     try:
