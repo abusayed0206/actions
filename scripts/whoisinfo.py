@@ -9,26 +9,33 @@ def get_dhaka_time():
     dhaka_tz = pytz.timezone('Asia/Dhaka')
     return datetime.datetime.now(dhaka_tz)
 
-def whois_lookup(domain):
-    """Fetches WHOIS information from the RDAP API."""
-    try:
-        headers = {
-            "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36",
-            "Accept": "application/json"
-        }
-        response = requests.get(
-            f"https://rdap.sayed.app/api/lookup/{domain}",
-            timeout=15,
-            headers=headers
-        )
-        print(f"🔎 {domain}: HTTP {response.status_code}")
-        response.raise_for_status()
-        data = response.json()
-        print(f"✅ {domain}: Got response with keys: {list(data.keys())}")
-        return data
-    except requests.RequestException as e:
-        print(f"⚠️ Failed to fetch WHOIS info for {domain}: {e}")
-        return None
+def whois_lookup(domain, retries=3):
+    """Fetches WHOIS information from the RDAP API with retry logic."""
+    for attempt in range(retries):
+        try:
+            headers = {
+                "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36",
+                "Accept": "application/json"
+            }
+            response = requests.get(
+                f"https://rdap.sayed.app/api/lookup/{domain}",
+                timeout=30,
+                headers=headers
+            )
+            print(f"🔎 {domain}: HTTP {response.status_code}")
+            response.raise_for_status()
+            data = response.json()
+            print(f"✅ {domain}: Got response with keys: {list(data.keys())}")
+            return data
+        except requests.RequestException as e:
+            print(f"⚠️ Attempt {attempt + 1}/{retries} failed for {domain}: {e}")
+            if attempt < retries - 1:
+                wait_time = (attempt + 1) * 3  # 3s, 6s, 9s
+                print(f"⏳ Waiting {wait_time}s before retry...")
+                time.sleep(wait_time)
+            else:
+                print(f"❌ All {retries} attempts failed for {domain}")
+                return None
 
 def parse_expiration_date(raw_date_str):
     """
@@ -105,16 +112,16 @@ def format_expiration_message(domain_info, domain):
         if isinstance(status, dict) and "url" in status:
             epp_status_urls.append(status["url"])
     
-    epp_status_text = "\n".join([f"- {url}" for url in epp_status_urls]) if epp_status_urls else "- No EPP URLs found"
+    epp_status_text = "\n".join([f"• {url}" for url in epp_status_urls]) if epp_status_urls else "• No EPP URLs found"
     
-    # Format the message
+    # Format the message (using HTML for better compatibility)
     message = (
-        f"🌐 **{domain}**\n"
-        f"🏢 **Registrar:** {registrar_name}\n"
-        f"⏳ **Expiration Date:** {formatted_expiration_date}\n"
-        f"🕒 **Time:** {formatted_expiration_time} GMT+6\n"
-        f"📆 **Remaining:** {remaining_days} days, {remaining_hours} hours\n"
-        f"🔒 **EPP Status:**\n{epp_status_text}\n"
+        f"🌐 <b>{domain}</b>\n"
+        f"🏢 <b>Registrar:</b> {registrar_name}\n"
+        f"⏳ <b>Expiration Date:</b> {formatted_expiration_date}\n"
+        f"🕒 <b>Time:</b> {formatted_expiration_time} GMT+6\n"
+        f"📆 <b>Remaining:</b> {remaining_days} days, {remaining_hours} hours\n"
+        f"🔒 <b>EPP Status:</b>\n{epp_status_text}\n"
         f"{status_emoji}"
     )
     
@@ -126,7 +133,7 @@ def send_telegram_message(message, bot_token, chat_id):
     payload = {
         "chat_id": chat_id,
         "text": message,
-        "parse_mode": "Markdown"
+        "parse_mode": "HTML"
     }
     try:
         response = requests.post(url, json=payload, timeout=10)
@@ -134,6 +141,9 @@ def send_telegram_message(message, bot_token, chat_id):
         print("✅ Telegram message sent successfully.")
     except requests.exceptions.RequestException as e:
         print(f"⚠️ Failed to send Telegram message: {e}")
+        # Print response body for debugging
+        if hasattr(e, 'response') and e.response is not None:
+            print(f"📝 Response body: {e.response.text}")
 
 def main():
     """Main function to check domain expiration and send a Telegram notification."""
@@ -161,7 +171,7 @@ def main():
         
         # Add delay before API call to avoid rate limiting
         if i > 1:
-            time.sleep(2)
+            time.sleep(5)
         
         # Fetch WHOIS data
         domain_info = whois_lookup(domain)
