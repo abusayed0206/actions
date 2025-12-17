@@ -1,0 +1,61 @@
+name: Pixelfed Image Scraper
+
+on:
+  # Run daily at 00:00 UTC
+  schedule:
+    - cron: '0 0 * * *'
+  
+  # Allow manual trigger
+  workflow_dispatch:
+
+  # Also run on push to main (optional - remove if not needed)
+  push:
+    branches:
+      - main
+    paths:
+      - 'scripts/pixelfed_scraper.py'
+
+jobs:
+  scrape:
+    runs-on: ubuntu-latest
+    
+    permissions:
+      contents: write
+    
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+          cache: 'pip'
+          cache-dependency-path: 'scripts/requirements.txt'
+
+      - name: Install dependencies
+        run: |
+          python -m pip install --upgrade pip
+          pip install -r scripts/requirements.txt
+
+      - name: Run Pixelfed scraper
+        env:
+          PIXELFED_ACCESS_TOKEN: ${{ secrets.PIXELFED_ACCESS_TOKEN }}
+        run: python scripts/pixelfed_scraper.py
+
+      - name: Extract image links
+        run: python scripts/extract_links.py
+
+      - name: Commit and push changes
+        run: |
+          git config --local user.email "github-actions[bot]@users.noreply.github.com"
+          git config --local user.name "github-actions[bot]"
+          git add pixelfed_images.json pixelfed.json
+          
+          # Check if there are changes to commit
+          if git diff --staged --quiet; then
+            echo "No changes to commit"
+          else
+            git commit -m "Update Pixelfed images data - $(date -u +'%Y-%m-%d %H:%M UTC')"
+            git push
+          fi
