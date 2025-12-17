@@ -52,11 +52,15 @@ def main():
         width = original.get("width")
         height = original.get("height")
         
+        # Get timestamp
+        created_at = img.get("created_at")
+        
         # If no dimensions in meta, skip or set to null
         entry = {
             "url": url,
             "width": width,
-            "height": height
+            "height": height,
+            "timestamp": created_at
         }
         
         image_links.append(entry)
