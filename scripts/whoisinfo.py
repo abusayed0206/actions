@@ -10,51 +10,68 @@ def get_dhaka_time():
     return datetime.datetime.now(dhaka_tz)
 
 def whois_lookup(domain, retries=3):
-    """Fetches WHOIS information from the RDAP API with retry logic."""
+    """Fetches WHOIS information from the RDAP API with retry logic and detailed logging."""
+    api_url = f"https://rdap.sayed.app/api/lookup/{domain}"
+    
     for attempt in range(retries):
         try:
             headers = {
                 "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36",
                 "Accept": "application/json"
             }
-            response = requests.get(
-                f"https://rdap.sayed.app/api/lookup/{domain}",
-                timeout=30,
-                headers=headers
-            )
-            print(f"🔎 {domain}: HTTP {response.status_code}")
+            
+            print(f"🔎 [{domain}] Attempt {attempt + 1}/{retries}")
+            print(f"📡 [{domain}] URL: {api_url}")
+            print(f"📡 [{domain}] Headers: {headers}")
+            
+            response = requests.get(api_url, timeout=30, headers=headers)
+            
+            print(f"📥 [{domain}] Status Code: {response.status_code}")
+            print(f"📥 [{domain}] Response Headers: {dict(response.headers)}")
+            
+            if response.status_code != 200:
+                print(f"📥 [{domain}] Response Body: {response.text[:500]}")
+            
             response.raise_for_status()
             data = response.json()
-            print(f"✅ {domain}: Got response with keys: {list(data.keys())}")
+            
+            print(f"✅ [{domain}] Success! Response keys: {list(data.keys())}")
+            print(f"✅ [{domain}] expiresOn: {data.get('expiresOn', 'NOT FOUND')}")
             return data
-        except requests.RequestException as e:
-            print(f"⚠️ Attempt {attempt + 1}/{retries} failed for {domain}: {e}")
-            if attempt < retries - 1:
-                wait_time = (attempt + 1) * 3  # 3s, 6s, 9s
-                print(f"⏳ Waiting {wait_time}s before retry...")
-                time.sleep(wait_time)
-            else:
-                print(f"❌ All {retries} attempts failed for {domain}")
-                return None
+            
+        except requests.exceptions.Timeout as e:
+            print(f"⏰ [{domain}] TIMEOUT after 30s: {e}")
+        except requests.exceptions.ConnectionError as e:
+            print(f"🔌 [{domain}] CONNECTION ERROR: {e}")
+        except requests.exceptions.HTTPError as e:
+            print(f"🚫 [{domain}] HTTP ERROR: {e}")
+            print(f"📥 [{domain}] Response Body: {e.response.text[:500] if e.response else 'No response'}")
+        except requests.exceptions.RequestException as e:
+            print(f"❌ [{domain}] REQUEST EXCEPTION: {type(e).__name__}: {e}")
+        except Exception as e:
+            print(f"💥 [{domain}] UNEXPECTED ERROR: {type(e).__name__}: {e}")
+        
+        if attempt < retries - 1:
+            wait_time = (attempt + 1) * 5  # 5s, 10s
+            print(f"⏳ [{domain}] Waiting {wait_time}s before retry...")
+            time.sleep(wait_time)
+        else:
+            print(f"💀 [{domain}] All {retries} attempts failed!")
+    
+    return None
 
 def parse_expiration_date(raw_date_str):
     """
     Parse expiration date from RDAP response.
-    Handles format: "Tue, 12 Jan 2027 14:17:50 GMT"
+    Format: "Tue, 12 Jan 2027 14:17:50 GMT"
     """
     if not raw_date_str:
         return None
     
     try:
-        # Remove " GMT" at the end since %Z doesn't parse it reliably
         clean_date = raw_date_str.replace(" GMT", "").strip()
-        
-        # Parse the date: "Tue, 12 Jan 2027 14:17:50"
         expiration_date = datetime.datetime.strptime(clean_date, "%a, %d %b %Y %H:%M:%S")
-        
-        # Localize to UTC (RDAP returns UTC times)
         expiration_date = pytz.utc.localize(expiration_date)
-        
         return expiration_date
     except ValueError as e:
         print(f"❌ Date parsing failed for '{raw_date_str}': {e}")
