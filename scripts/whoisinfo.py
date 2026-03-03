@@ -20,9 +20,14 @@ def whois_lookup(domain, retries=3):
     for attempt in range(retries):
         try:
             headers = {
-                "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36",
+                "User-Agent": "GitHub-Actions-Domain-Monitor/1.0",
                 "Accept": "application/json"
             }
+            
+            # Add bypass token for Cloudflare (to bypass bot protection)
+            bypass_token = os.environ.get("CF_BYPASS_TOKEN")
+            if bypass_token:
+                headers["X-Bypass-Token"] = bypass_token
             
             print(f"🔎 [{domain}] Attempt {attempt + 1}/{retries}")
             print(f"📡 [{domain}] URL: {api_url}")
@@ -59,7 +64,7 @@ def whois_lookup(domain, retries=3):
             print(f"💥 [{domain}] UNEXPECTED ERROR: {type(e).__name__}: {e}")
         
         if attempt < retries - 1:
-            wait_time = (attempt + 1) * 5  # 5s, 10s
+            wait_time = (attempt + 1) * 10  # 10s, 20s (increased for rate limiting)
             print(f"⏳ [{domain}] Waiting {wait_time}s before retry...")
             time.sleep(wait_time)
         else:
@@ -225,9 +230,9 @@ def main():
         print(f"[{i}/{len(domains)}] Processing: {domain}")
         print(f"{'='*60}")
         
-        # Add delay before API call to avoid rate limiting
+        # Add delay before API call to avoid rate limiting (1 RPS = 1 request per second)
         if i > 1:
-            time.sleep(5)
+            time.sleep(2)  # Wait 2 seconds between domains to respect rate limits
         
         # Fetch WHOIS data
         domain_info = whois_lookup(domain)
@@ -239,8 +244,9 @@ def main():
         print(f"✉️ Sending to Telegram...")
         send_telegram_message(message, bot_token, chat_id)
         
-        # Small delay between Telegram messages
-        time.sleep(1)
+        # Delay between iterations to respect rate limits (1 RPS)
+        if i < len(domains):
+            time.sleep(1.5)
 
     print(f"\n✅ All domains processed!")
 
