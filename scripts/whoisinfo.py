@@ -10,8 +10,12 @@ def get_dhaka_time():
     return datetime.datetime.now(dhaka_tz)
 
 def whois_lookup(domain, retries=3):
-    """Fetches WHOIS information from the RDAP API with retry logic and detailed logging."""
-    api_url = f"https://rdap.sayed.app/api/lookup/{domain}"
+    """Fetches WHOIS information from the appropriate API with retry logic and detailed logging."""
+    # Check if domain is .bd domain
+    if domain.endswith('.bd'):
+        api_url = f"https://api.sayed.app/whoisbd/lookup?domain={domain}"
+    else:
+        api_url = f"https://rdap.sayed.app/api/lookup/{domain}"
     
     for attempt in range(retries):
         try:
@@ -36,7 +40,10 @@ def whois_lookup(domain, retries=3):
             data = response.json()
             
             print(f"✅ [{domain}] Success! Response keys: {list(data.keys())}")
-            print(f"✅ [{domain}] expiresOn: {data.get('expiresOn', 'NOT FOUND')}")
+            if domain.endswith('.bd'):
+                print(f"✅ [{domain}] expiry: {data.get('data', {}).get('expiry', 'NOT FOUND')}")
+            else:
+                print(f"✅ [{domain}] expiresOn: {data.get('expiresOn', 'NOT FOUND')}")
             return data
             
         except requests.exceptions.Timeout as e:
@@ -62,17 +69,29 @@ def whois_lookup(domain, retries=3):
 
 def parse_expiration_date(raw_date_str):
     """
-    Parse expiration date from RDAP response.
-    Format: "Tue, 12 Jan 2027 14:17:50 GMT"
+    Parse expiration date from RDAP response or BD WHOIS response.
+    Formats: 
+    - "Tue, 12 Jan 2027 14:17:50 GMT" (RDAP)
+    - "28/01/2030" (BD WHOIS)
     """
     if not raw_date_str:
         return None
     
     try:
-        clean_date = raw_date_str.replace(" GMT", "").strip()
-        expiration_date = datetime.datetime.strptime(clean_date, "%a, %d %b %Y %H:%M:%S")
-        expiration_date = pytz.utc.localize(expiration_date)
-        return expiration_date
+        # Try BD format first (DD/MM/YYYY)
+        if '/' in raw_date_str:
+            expiration_date = datetime.datetime.strptime(raw_date_str, "%d/%m/%Y")
+            # Assume end of day for BD dates (23:59:59 in BD timezone)
+            dhaka_tz = pytz.timezone('Asia/Dhaka')
+            expiration_date = expiration_date.replace(hour=23, minute=59, second=59)
+            expiration_date = dhaka_tz.localize(expiration_date)
+            return expiration_date
+        else:
+            # Try RDAP format
+            clean_date = raw_date_str.replace(" GMT", "").strip()
+            expiration_date = datetime.datetime.strptime(clean_date, "%a, %d %b %Y %H:%M:%S")
+            expiration_date = pytz.utc.localize(expiration_date)
+            return expiration_date
     except ValueError as e:
         print(f"❌ Date parsing failed for '{raw_date_str}': {e}")
         return None
@@ -84,15 +103,24 @@ def format_expiration_message(domain_info, domain):
     if not domain_info:
         return f"⚠️ {domain}: API lookup failed - no data returned"
     
-    # Check if expiresOn field exists
-    if 'expiresOn' not in domain_info:
-        print(f"⚠️ {domain}: Missing 'expiresOn' field. Response keys: {list(domain_info.keys())}")
-        return f"⚠️ {domain}: Could not retrieve expiration information."
+    # Determine if this is a BD domain response or RDAP response
+    is_bd_domain = 'data' in domain_info and 'expiry' in domain_info.get('data', {})
+    
+    # Extract expiration date based on response type
+    if is_bd_domain:
+        raw_expires = domain_info.get('data', {}).get('expiry')
+        if not raw_expires:
+            print(f"⚠️ {domain}: Missing 'expiry' field in data. Response keys: {list(domain_info.keys())}")
+            return f"⚠️ {domain}: Could not retrieve expiration information."
+    else:
+        if 'expiresOn' not in domain_info:
+            print(f"⚠️ {domain}: Missing 'expiresOn' field. Response keys: {list(domain_info.keys())}")
+            return f"⚠️ {domain}: Could not retrieve expiration information."
+        raw_expires = domain_info.get("expiresOn")
+    
+    print(f"📅 {domain}: Raw expiration = {raw_expires}")
     
     # Parse the expiration date
-    raw_expires = domain_info.get("expiresOn")
-    print(f"📅 {domain}: Raw expiresOn = {raw_expires}")
-    
     expiration_date = parse_expiration_date(raw_expires)
     
     if expiration_date is None:
@@ -110,8 +138,13 @@ def format_expiration_message(domain_info, domain):
     remaining_days = remaining_time.days
     remaining_hours = remaining_time.seconds // 3600  # Convert seconds to hours
     
-    # Get registrar name
-    registrar_name = domain_info.get("registrar", "Unknown")
+    # Get registrar/registrant name based on response type
+    if is_bd_domain:
+        registrar_name = domain_info.get('data', {}).get('registrant', 'Unknown')
+        registrar_label = 'Registrant'
+    else:
+        registrar_name = domain_info.get("registrar", "Unknown")
+        registrar_label = 'Registrar'
     
     # Format dates for display
     formatted_expiration_date = expiration_date_dhaka.strftime('%d %B, %Y')
@@ -123,22 +156,25 @@ def format_expiration_message(domain_info, domain):
     else:
         status_emoji = "🔥🚨 EXPIRED!"
     
-    # Extract EPP status URLs
-    epp_status_urls = []
-    for status in domain_info.get("statuses", []):
-        if isinstance(status, dict) and "url" in status:
-            epp_status_urls.append(status["url"])
-    
-    epp_status_text = "\n".join([f"• {url}" for url in epp_status_urls]) if epp_status_urls else "• No EPP URLs found"
+    # Extract EPP status URLs (only for RDAP responses)
+    epp_status_text = ""
+    if not is_bd_domain:
+        epp_status_urls = []
+        for status in domain_info.get("statuses", []):
+            if isinstance(status, dict) and "url" in status:
+                epp_status_urls.append(status["url"])
+        
+        epp_status_text = "\n".join([f"• {url}" for url in epp_status_urls]) if epp_status_urls else "• No EPP URLs found"
+        epp_status_text = f"🔒 <b>EPP Status:</b>\n{epp_status_text}\n"
     
     # Format the message (using HTML for better compatibility)
     message = (
         f"🌐 <b>{domain}</b>\n"
-        f"🏢 <b>Registrar:</b> {registrar_name}\n"
+        f"🏢 <b>{registrar_label}:</b> {registrar_name}\n"
         f"⏳ <b>Expiration Date:</b> {formatted_expiration_date}\n"
         f"🕒 <b>Time:</b> {formatted_expiration_time} GMT+6\n"
         f"📆 <b>Remaining:</b> {remaining_days} days, {remaining_hours} hours\n"
-        f"🔒 <b>EPP Status:</b>\n{epp_status_text}\n"
+        f"{epp_status_text}"
         f"{status_emoji}"
     )
     
@@ -169,7 +205,10 @@ def main():
         "sayed.page",
         "sayed.app",
         "abusayed.dev",
-        "nayem.page"
+        "nayem.page",
+        "lrs.bd",
+        "tracker.bd",
+        "nextshop.com.bd"
     ]
 
     bot_token = os.environ.get("TELEGRAM_BOT_TOKEN")
