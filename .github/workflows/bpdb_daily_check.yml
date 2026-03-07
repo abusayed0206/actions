@@ -1,0 +1,50 @@
+name: BPDB Meter Daily Check
+
+on:
+  schedule:
+    # Runs at 05:34 UTC daily (11:34 AM Bangladesh time, UTC+6)
+    - cron: "34 5 * * *"
+  workflow_dispatch: # Allow manual trigger from GitHub UI
+
+permissions:
+  contents: write # Needed to commit updated CSV and MD files
+
+jobs:
+  fetch-and-update:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      - name: Install dependencies
+        run: pip install requests
+
+      - name: Run BPDB meter check
+        env:
+          BPDB_METER_NO: ${{ secrets.BPDB_METER_NO }}
+          # Optional: override if the Next-Action ID changes after a site redeployment
+          # BPDB_NEXT_ACTION: ${{ secrets.BPDB_NEXT_ACTION }}
+        run: python scripts/bpdb_meter_check.py
+
+      - name: Commit updated data files
+        run: |
+          git config --local user.name  "github-actions[bot]"
+          git config --local user.email "github-actions[bot]@users.noreply.github.com"
+
+          git add files/bpdb_recharges.csv files/bpdb_analytics.md files/bpdb_stats.md
+
+          # Only commit when there are actual changes
+          if git diff --staged --quiet; then
+            echo "No changes to commit — data is already up-to-date."
+          else
+            TODAY=$(date -u +'%Y-%m-%d')
+            git commit -m "chore(bpdb): daily meter update ${TODAY}"
+            git push
+          fi
