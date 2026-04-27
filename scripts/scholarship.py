@@ -33,7 +33,7 @@ def send_pdf_to_telegram(pdf_url, caption):
 
 def main():
 
-    url = 'https://shed.gov.bd/site/view/scholarship/%E0%A6%B6%E0%A6%BF%E0%A6%95%E0%A7%8D%E0%A6%B7%E0%A6%BE%E0%A6%AC%E0%A7%83%E0%A6%A4%E0%A7%8D%E0%A6%A4%E0%A6%BF-%E0%A6%AC%E0%A6%BF%E0%A6%9C%E0%A7%8D%E0%A6%9E%E0%A6%AA%E0%A7%8D%E0%A6%A4%E0%A6%BF'
+    url = 'https://shed.gov.bd/pages/moedu-scholarships'
     try:
         response = requests.get(url, timeout=30)
         response.raise_for_status()
@@ -42,7 +42,7 @@ def main():
         print(f"[ERROR] Failed to fetch the page: {url} - {e}")
         return
 
-    table = soup.find('table', class_='bordered')
+    table = soup.find('table', id='noticeTable')
     if not table:
         print('[ERROR] Scholarship table not found on the page.')
         return
@@ -56,13 +56,28 @@ def main():
     today = datetime.today().date()
     found_today = False
 
+    bn_to_en = str.maketrans('০১২৩৪৫৬৭৮৯', '0123456789')
+
     for row in rows:
         tds = row.find_all('td')
-        if len(tds) < 4:
+        if not tds:
             continue
-        subject = tds[1].get_text(strip=True)
-        pub_date = tds[2].get_text(strip=True)
-        doc_link = tds[3].find('a')['href'] if tds[3].find('a') else ''
+        
+        title_td = row.find('td', {'data-column': 'title'})
+        files_td = row.find('td', {'data-column': 'files'})
+        date_td = row.find('td', {'data-column': 'publish_date'})
+
+        if not (title_td and date_td):
+            continue
+
+        subject = title_td.get_text(strip=True)
+        pub_date_bn = date_td.get_text(strip=True)
+        pub_date = pub_date_bn.translate(bn_to_en)
+        
+        doc_link = ''
+        if files_td and files_td.find('a'):
+            doc_link = files_td.find('a')['href']
+
         if doc_link.startswith('//'):
             doc_link = 'https:' + doc_link
         elif doc_link.startswith('/'):
@@ -72,7 +87,7 @@ def main():
 
         # Compare date with today
         try:
-            date_obj = datetime.strptime(pub_date, '%Y-%m-%d').date()
+            date_obj = datetime.strptime(pub_date, '%d-%m-%Y').date()
             if date_obj == today:
                 status = 'Published today'
             elif date_obj > today:
@@ -102,3 +117,4 @@ def main():
 
 if __name__ == '__main__':
     main()
+
