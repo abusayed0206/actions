@@ -213,7 +213,8 @@ def main():
         "nayem.page",
         "lrs.bd",
         "tracker.bd",
-        "nextshop.com.bd"
+        "nextshop.com.bd",
+        "kriti.app"
     ]
 
     bot_token = os.environ.get("TELEGRAM_BOT_TOKEN")
