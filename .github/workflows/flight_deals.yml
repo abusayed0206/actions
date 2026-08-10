@@ -1,0 +1,32 @@
+name: DAC-FRA Flight Deals to Telegram
+
+on:
+  schedule:
+    - cron: "0 */4 * * *" # Every 4 hours
+  workflow_dispatch: # Allows manual trigger from GitHub UI
+
+jobs:
+  flight-deals:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+          cache: "pip"
+
+      - name: Install dependencies
+        run: |
+          python -m pip install --upgrade pip
+          pip install "fast-flights @ git+https://github.com/AWeirdDev/flights.git@229bc851a161752787a7f69813a77d570fe58911" typing_extensions requests
+
+      - name: Run flight deals search
+        env:
+          TELEGRAM_BOT_TOKEN: ${{ secrets.TELEGRAM_BOT_TOKEN }}
+          TELEGRAM_CHAT_ID: ${{ secrets.TELEGRAM_CHAT_ID }}
+        run: python scripts/flight_deals.py
