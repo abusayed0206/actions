@@ -6,7 +6,7 @@
     "profile_url": "https://pixelfed.social/abusayed",
     "total_posts": 101,
     "total_images": 120,
-    "scraped_at": "2026-09-01T02:47:31.385960Z",
+    "scraped_at": "2026-09-02T02:08:00.264834Z",
     "method": "api",
     "version": "2.0.0"
   },
@@ -984,7 +984,7 @@
       "post_content_html": "The end of the <a href=\"https://pixelfed.social/discover/tags/Mentalist?src=hash\" title=\"#Mentalist\" class=\"u-url hashtag\" rel=\"external nofollow noopener\">#Mentalist</a>",
       "created_at": "2025-07-03T14:20:15.000Z",
       "visibility": "public",
-      "favourites_count": 0,
+      "favourites_count": 1,
       "reblogs_count": 0,
       "replies_count": 1,
       "tags": [
@@ -1016,7 +1016,7 @@
       "post_content_html": "The end of the <a href=\"https://pixelfed.social/discover/tags/Mentalist?src=hash\" title=\"#Mentalist\" class=\"u-url hashtag\" rel=\"external nofollow noopener\">#Mentalist</a>",
       "created_at": "2025-07-03T14:20:15.000Z",
       "visibility": "public",
-      "favourites_count": 0,
+      "favourites_count": 1,
       "reblogs_count": 0,
       "replies_count": 1,
       "tags": [
@@ -1048,7 +1048,7 @@
       "post_content_html": "The end of the <a href=\"https://pixelfed.social/discover/tags/Mentalist?src=hash\" title=\"#Mentalist\" class=\"u-url hashtag\" rel=\"external nofollow noopener\">#Mentalist</a>",
       "created_at": "2025-07-03T14:20:15.000Z",
       "visibility": "public",
-      "favourites_count": 0,
+      "favourites_count": 1,
       "reblogs_count": 0,
       "replies_count": 1,
       "tags": [
@@ -1080,7 +1080,7 @@
       "post_content_html": "The end of the <a href=\"https://pixelfed.social/discover/tags/Mentalist?src=hash\" title=\"#Mentalist\" class=\"u-url hashtag\" rel=\"external nofollow noopener\">#Mentalist</a>",
       "created_at": "2025-07-03T14:20:15.000Z",
       "visibility": "public",
-      "favourites_count": 0,
+      "favourites_count": 1,
       "reblogs_count": 0,
       "replies_count": 1,
       "tags": [
