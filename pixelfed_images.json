@@ -4,9 +4,9 @@
     "username": "abusayed",
     "account_id": "661632678858510875",
     "profile_url": "https://pixelfed.social/abusayed",
-    "total_posts": 103,
-    "total_images": 122,
-    "scraped_at": "2026-09-09T02:18:17.997741Z",
+    "total_posts": 101,
+    "total_images": 120,
+    "scraped_at": "2026-09-10T02:16:57.255170Z",
     "method": "api",
     "version": "2.0.0"
   },
@@ -1690,36 +1690,6 @@
       "tags": []
     },
     {
-      "id": "26578642",
-      "post_id": "803617025637319571",
-      "url": "https://pxscdn.com/public/m/_v2/661632678858510875/549719332-a3f277/8gDczifW8IXL/MUoHDI3ulFRhbmTNVSR9Fx7bjFheMfK8kvTODVRY.jpg",
-      "preview_url": "https://pxscdn.com/public/m/_v2/661632678858510875/549719332-a3f277/8gDczifW8IXL/MUoHDI3ulFRhbmTNVSR9Fx7bjFheMfK8kvTODVRY_thumb.jpg",
-      "remote_url": null,
-      "description": "",
-      "blurhash": "UMHBSc}1U[qGIoWnf,kV01I-p0pcs.j[a#oJ",
-      "meta": {
-        "focus": {
-          "x": 0,
-          "y": 0
-        },
-        "original": {
-          "width": 1920,
-          "height": 543,
-          "size": "1920x543",
-          "aspect": 3.5359116022099446
-        }
-      },
-      "post_url": "https://pixelfed.social/p/abusayed/803617025637319571",
-      "post_content": null,
-      "post_content_html": "",
-      "created_at": "2025-03-07T13:27:09.000Z",
-      "visibility": "public",
-      "favourites_count": 3,
-      "reblogs_count": 0,
-      "replies_count": 0,
-      "tags": []
-    },
-    {
       "id": "26536488",
       "post_id": "803273364705233552",
       "url": "https://pxscdn.com/public/m/_v2/661632678858510875/549719332-a3f277/IZHg90QnOxCS/P8JHjWO0nKvmADKiLuXa1xUGCiNA2kFbsg9xeCyG.png",
@@ -2964,36 +2934,6 @@
       "post_content": null,
       "post_content_html": "",
       "created_at": "2024-12-16T03:22:45.000Z",
-      "visibility": "public",
-      "favourites_count": 0,
-      "reblogs_count": 0,
-      "replies_count": 0,
-      "tags": []
-    },
-    {
-      "id": "22759360",
-      "post_id": "771449663429944221",
-      "url": "https://pxscdn.com/public/m/_v2/661632678858510875/9da63c77d-bc90ba/qlrcY943RTzs/zY0HNbtlmgb91QbNDDJGHMnJiDLMGiusUR11GY1y.jpg",
-      "preview_url": "https://pxscdn.com/public/m/_v2/661632678858510875/9da63c77d-bc90ba/qlrcY943RTzs/zY0HNbtlmgb91QbNDDJGHMnJiDLMGiusUR11GY1y_thumb.jpg",
-      "remote_url": null,
-      "description": "",
-      "blurhash": "U59G?p00D%?b~q00xut700of-;D%9Y%Mofog",
-      "meta": {
-        "focus": {
-          "x": 0,
-          "y": 0
-        },
-        "original": {
-          "width": 1920,
-          "height": 1080,
-          "size": "1920x1080",
-          "aspect": 1.7777777777777777
-        }
-      },
-      "post_url": "https://pixelfed.social/p/abusayed/771449663429944221",
-      "post_content": null,
-      "post_content_html": "",
-      "created_at": "2024-12-08T19:05:32.000Z",
       "visibility": "public",
       "favourites_count": 0,
       "reblogs_count": 0,
