@@ -2,31 +2,46 @@ name: Whois Report
 
 on:
   schedule:
-    - cron: '39 4 * * 0' # Runs every Sunday at 04:39 UTC (10:39 Dhaka time)
+    - cron: '39 4 * * 0' # Every Sunday at 04:39 UTC (10:39 Dhaka time)
   workflow_dispatch: # Allows manual triggering
+
+permissions:
+  contents: read
+
+concurrency:
+  group: whois-report
+  cancel-in-progress: false
 
 jobs:
   whois_report:
     runs-on: ubuntu-latest
+    timeout-minutes: 10
 
     steps:
       - name: Checkout code
-        uses: actions/checkout@v3
+        uses: actions/checkout@v4
 
       - name: Set up Python
-        uses: actions/setup-python@v4
+        uses: actions/setup-python@v5
         with:
           python-version: '3.9'
+          cache: 'pip'
+          cache-dependency-path: requirements.txt
 
       - name: Install dependencies
-        run: |
-          pip install python-whois requests pytz
+        run: pip install -r requirements.txt
 
       - name: Run whois report
         run: python scripts/whoisinfo.py
         env:
           TELEGRAM_BOT_TOKEN: ${{ secrets.TELEGRAM_BOT_TOKEN }}
           TELEGRAM_CHAT_ID: ${{ secrets.TELEGRAM_CHAT_ID }}
-          # Optional: needed to read the registrar-side expiry date for .de domains
+          # Needed to read the registrar-side expiry date for .de domains.
           SPACESHIP_API_KEY: ${{ secrets.SPACESHIP_API_KEY }}
           SPACESHIP_API_SECRET: ${{ secrets.SPACESHIP_API_SECRET }}
+          # Optional Cloudflare bypass token for the WHOIS APIs.
+          CF_BYPASS_TOKEN: ${{ secrets.CF_BYPASS_TOKEN }}
+          # Optional repository variables. Defaults are shown after "||".
+          WHOIS_ALERT_DAYS: ${{ vars.WHOIS_ALERT_DAYS || '30' }}
+          WHOIS_WARN_DAYS: ${{ vars.WHOIS_WARN_DAYS || '90' }}
+          WHOIS_REQUEST_DELAY_SECONDS: ${{ vars.WHOIS_REQUEST_DELAY_SECONDS || '1.0' }}

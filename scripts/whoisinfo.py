@@ -1,13 +1,67 @@
 import datetime
-import requests
+import html
 import os
-import pytz
+import re
 import time
+
+import pytz
+import requests
+
+DHAKA_TZ = pytz.timezone("Asia/Dhaka")
+TELEGRAM_MAX_LENGTH = 3800
+DEFAULT_ALERT_DAYS = 30
+DEFAULT_WARN_DAYS = 90
+DEFAULT_REQUEST_DELAY_SECONDS = 1.0
+
+URGENCY_EMOJI = {
+    "error": "❓",
+    "expired": "🔥",
+    "critical": "🚨",
+    "warning": "🟡",
+    "healthy": "✅",
+    "unknown": "ℹ️",
+}
+
+# These statuses mean the domain needs attention even if its expiry date is
+# still in the future (for example, a registrar hold or a grace period).
+ALERT_STATUSES = {
+    "available",
+    "client hold",
+    "clienthold",
+    "free",
+    "grace1",
+    "grace2",
+    "inactive",
+    "pending delete",
+    "pendingdelete",
+    "redemption",
+    "redemption period",
+    "redemptionperiod",
+    "server hold",
+    "serverhold",
+}
+
 
 def get_dhaka_time():
     """Returns the current time in Dhaka timezone (GMT+6)."""
-    dhaka_tz = pytz.timezone('Asia/Dhaka')
-    return datetime.datetime.now(dhaka_tz)
+    return datetime.datetime.now(DHAKA_TZ)
+
+
+def env_int(name, default):
+    """Reads an integer environment variable, falling back to a default."""
+    try:
+        return int(os.environ.get(name, default))
+    except (TypeError, ValueError):
+        return default
+
+
+def env_float(name, default):
+    """Reads a float environment variable, falling back to a default."""
+    try:
+        return float(os.environ.get(name, default))
+    except (TypeError, ValueError):
+        return default
+
 
 def spaceship_lookup(domain, retries=2):
     """
@@ -36,13 +90,16 @@ def spaceship_lookup(domain, retries=2):
         try:
             print(f"🔎 [{domain}] Spaceship attempt {attempt + 1}/{retries}")
             response = requests.get(api_url, timeout=30, headers=headers)
-            print(f"📥 [{domain}] Spaceship status code: {response.status_code}")
+            print(f"📥 [{domain}] Spaceship HTTP {response.status_code}")
 
             if response.status_code != 200:
                 print(f"📥 [{domain}] Spaceship response body: {response.text[:300]}")
 
             if response.status_code in (401, 403):
-                print(f"⚠️ [{domain}] Spaceship authorization failed. Check the API key/secret and domains:read scope.")
+                print(
+                    f"⚠️ [{domain}] Spaceship authorization failed. "
+                    "Check the API key/secret and domains:read scope."
+                )
                 return None
             if response.status_code == 404:
                 print(f"⚠️ [{domain}] Domain not found in the Spaceship account.")
@@ -53,11 +110,24 @@ def spaceship_lookup(domain, retries=2):
 
             events = []
             if data.get("registrationDate"):
-                events.append({"eventAction": "registration", "eventDate": data["registrationDate"]})
+                events.append(
+                    {
+                        "eventAction": "registration",
+                        "eventDate": data["registrationDate"],
+                    }
+                )
             if data.get("expirationDate"):
-                events.append({"eventAction": "expiration", "eventDate": data["expirationDate"]})
+                events.append(
+                    {
+                        "eventAction": "expiration",
+                        "eventDate": data["expirationDate"],
+                    }
+                )
 
-            print(f"✅ [{domain}] Spaceship expirationDate: {data.get('expirationDate', 'NOT FOUND')}")
+            print(
+                f"✅ [{domain}] Spaceship expirationDate: "
+                f"{data.get('expirationDate', 'NOT FOUND')}"
+            )
 
             normalized = {
                 "source": "spaceship",
@@ -72,341 +142,660 @@ def spaceship_lookup(domain, retries=2):
             return normalized
 
         except requests.exceptions.RequestException as e:
-            print(f"❌ [{domain}] Spaceship request error: {type(e).__name__}: {e}")
+            print(f"❌ [{domain}] Spaceship request error: {type(e).__name__}")
             if attempt < retries - 1:
                 wait_time = (attempt + 1) * 5
-                print(f"⏳ [{domain}] Waiting {wait_time}s before Spaceship retry...")
+                print(
+                    f"⏳ [{domain}] Waiting {wait_time}s before Spaceship retry..."
+                )
                 time.sleep(wait_time)
 
-    print(f"💀 [{domain}] Spaceship lookup failed after {retries} attempts; using DENIC RDAP.")
+    print(
+        f"💀 [{domain}] Spaceship lookup failed after {retries} attempts; "
+        "using DENIC RDAP."
+    )
     return None
 
+
 def whois_lookup(domain, retries=3):
-    """Fetches WHOIS information from the appropriate API with retry logic and detailed logging."""
+    """Fetches WHOIS information from the appropriate API with retry logic."""
     domain = domain.lower()
 
     # .de domains are queried from Spaceship's registrar API when credentials
     # are available, because DENIC itself publishes no expiry date. If that
     # fails, fall back to DENIC RDAP for status/last-changed data.
-    if domain.endswith('.bd'):
+    if domain.endswith(".bd"):
         api_url = f"https://api.sayed.app/whoisbd/lookup?domain={domain}"
-    elif domain.endswith('.de'):
+    elif domain.endswith(".de"):
         spaceship_data = spaceship_lookup(domain)
         if spaceship_data:
             return spaceship_data
         api_url = f"https://rdap.denic.de/domain/{domain}"
     else:
         api_url = f"https://rdap.sayed.app/api/lookup/{domain}"
-    
+
     for attempt in range(retries):
         try:
             headers = {
                 "User-Agent": "GitHub-Actions-Domain-Monitor/1.0",
-                "Accept": "application/json"
+                "Accept": "application/json",
             }
-            
-            # Add bypass token for Cloudflare (to bypass bot protection)
+
+            # Add bypass token for Cloudflare (to bypass bot protection).
+            # Never print the headers: this token must stay secret.
             bypass_token = os.environ.get("CF_BYPASS_TOKEN")
             if bypass_token:
                 headers["X-Bypass-Token"] = bypass_token
-            
-            print(f"🔎 [{domain}] Attempt {attempt + 1}/{retries}")
-            print(f"📡 [{domain}] URL: {api_url}")
-            print(f"📡 [{domain}] Headers: {headers}")
-            
+
+            print(f"🔎 [{domain}] Attempt {attempt + 1}/{retries}: {api_url}")
             response = requests.get(api_url, timeout=30, headers=headers)
-            
-            print(f"📥 [{domain}] Status Code: {response.status_code}")
-            print(f"📥 [{domain}] Response Headers: {dict(response.headers)}")
-            
+            print(f"📥 [{domain}] HTTP {response.status_code}")
+
             if response.status_code != 200:
-                print(f"📥 [{domain}] Response Body: {response.text[:500]}")
-            
+                print(f"📥 [{domain}] Response body: {response.text[:300]}")
+
+            # 4xx responses (except rate limiting) will not improve on retry.
+            if (
+                400 <= response.status_code < 500
+                and response.status_code != 429
+            ):
+                print(f"🚫 [{domain}] HTTP {response.status_code}; not retrying.")
+                return None
+
             response.raise_for_status()
             data = response.json()
-            
-            print(f"✅ [{domain}] Success! Response keys: {list(data.keys())}")
-            if domain.endswith('.bd'):
-                print(f"✅ [{domain}] expiry: {data.get('data', {}).get('expiry', 'NOT FOUND')}")
-            elif domain.endswith('.de'):
-                print(f"✅ [{domain}] status: {data.get('status', 'NOT FOUND')}")
-            else:
-                print(f"✅ [{domain}] expiresOn: {data.get('expiresOn', 'NOT FOUND')}")
+            print(f"✅ [{domain}] Response received")
             return data
-            
-        except requests.exceptions.Timeout as e:
-            print(f"⏰ [{domain}] TIMEOUT after 30s: {e}")
-        except requests.exceptions.ConnectionError as e:
-            print(f"🔌 [{domain}] CONNECTION ERROR: {e}")
+
+        except requests.exceptions.Timeout:
+            print(f"⏰ [{domain}] Request timed out after 30s")
+        except requests.exceptions.ConnectionError:
+            print(f"🔌 [{domain}] Connection error")
         except requests.exceptions.HTTPError as e:
-            print(f"🚫 [{domain}] HTTP ERROR: {e}")
-            print(f"📥 [{domain}] Response Body: {e.response.text[:500] if e.response else 'No response'}")
+            status = (
+                e.response.status_code if e.response is not None else "unknown"
+            )
+            print(f"🚫 [{domain}] HTTP error {status}")
         except requests.exceptions.RequestException as e:
-            print(f"❌ [{domain}] REQUEST EXCEPTION: {type(e).__name__}: {e}")
+            print(f"❌ [{domain}] Request error: {type(e).__name__}")
         except Exception as e:
-            print(f"💥 [{domain}] UNEXPECTED ERROR: {type(e).__name__}: {e}")
-        
+            print(f"💥 [{domain}] Unexpected error: {type(e).__name__}: {e}")
+
         if attempt < retries - 1:
-            wait_time = (attempt + 1) * 10  # 10s, 20s (increased for rate limiting)
+            wait_time = (attempt + 1) * 10
             print(f"⏳ [{domain}] Waiting {wait_time}s before retry...")
             time.sleep(wait_time)
         else:
-            print(f"💀 [{domain}] All {retries} attempts failed!")
-    
+            print(f"💀 [{domain}] All {retries} attempts failed")
+
     return None
+
 
 def parse_expiration_date(raw_date_str):
     """
-    Parse expiration date from RDAP response or BD WHOIS response.
-    Formats: 
+    Parse expiration dates from the RDAP wrapper or BD WHOIS API.
+
+    Formats:
     - "Tue, 12 Jan 2027 14:17:50 GMT" (RDAP)
     - "28/01/2030" (BD WHOIS)
     """
     if not raw_date_str:
         return None
-    
+
+    raw_date_str = str(raw_date_str).strip()
+    if raw_date_str.upper() in {"N/A", "NONE", "UNKNOWN"}:
+        return None
+
     try:
-        # Try BD format first (DD/MM/YYYY)
-        if '/' in raw_date_str:
-            expiration_date = datetime.datetime.strptime(raw_date_str, "%d/%m/%Y")
-            # Assume end of day for BD dates (23:59:59 in BD timezone)
-            dhaka_tz = pytz.timezone('Asia/Dhaka')
-            expiration_date = expiration_date.replace(hour=23, minute=59, second=59)
-            expiration_date = dhaka_tz.localize(expiration_date)
-            return expiration_date
-        else:
-            # Try RDAP format
-            clean_date = raw_date_str.replace(" GMT", "").strip()
-            expiration_date = datetime.datetime.strptime(clean_date, "%a, %d %b %Y %H:%M:%S")
-            expiration_date = pytz.utc.localize(expiration_date)
-            return expiration_date
-    except ValueError as e:
+        # BD format (DD/MM/YYYY). Assume end of day in Dhaka.
+        if "/" in raw_date_str:
+            expiration_date = datetime.datetime.strptime(
+                raw_date_str, "%d/%m/%Y"
+            )
+            expiration_date = expiration_date.replace(
+                hour=23, minute=59, second=59
+            )
+            return DHAKA_TZ.localize(expiration_date)
+
+        # RDAP format.
+        clean_date = raw_date_str.replace(" GMT", "").strip()
+        expiration_date = datetime.datetime.strptime(
+            clean_date, "%a, %d %b %Y %H:%M:%S"
+        )
+        return pytz.utc.localize(expiration_date)
+    except (ValueError, TypeError) as e:
         print(f"❌ Date parsing failed for '{raw_date_str}': {e}")
         return None
+
 
 def parse_iso_date(raw_date_str):
     """Parse an ISO 8601 timestamp such as '2026-10-16T23:31:44+02:00'."""
     if not raw_date_str:
         return None
 
+    raw_date_str = str(raw_date_str).strip()
+    if raw_date_str.upper() in {"N/A", "NONE", "UNKNOWN"}:
+        return None
+
     try:
         # Python 3.9/3.10 do not accept a trailing 'Z' in fromisoformat().
-        parsed = datetime.datetime.fromisoformat(raw_date_str.replace("Z", "+00:00"))
+        parsed = datetime.datetime.fromisoformat(
+            raw_date_str.replace("Z", "+00:00")
+        )
         if parsed.tzinfo is None:
-            dhaka_tz = pytz.timezone('Asia/Dhaka')
             if parsed.hour == 0 and parsed.minute == 0 and parsed.second == 0:
                 parsed = parsed.replace(hour=23, minute=59, second=59)
-            parsed = dhaka_tz.localize(parsed)
+            parsed = DHAKA_TZ.localize(parsed)
         return parsed
-    except ValueError as e:
+    except (ValueError, TypeError) as e:
         print(f"❌ ISO date parsing failed for '{raw_date_str}': {e}")
         return None
+
 
 def get_event_date(events, action):
     """Returns the eventDate for an RDAP event action, if present."""
     return next(
-        (event.get('eventDate') for event in events
-         if isinstance(event, dict) and event.get('eventAction') == action),
-        None
+        (
+            event.get("eventDate")
+            for event in events
+            if isinstance(event, dict) and event.get("eventAction") == action
+        ),
+        None,
     )
 
-def format_de_message(domain_info, domain):
-    """
-    Formats a .de domain report from Spaceship (registrar) or DENIC (registry).
 
-    DENIC does not publish expiration dates for .de domains. When Spaceship
-    credentials are available, the registrar-side expiration date is included.
-    Otherwise the report shows DENIC status and last-changed data only.
-    """
-    if not domain_info:
-        return f"⚠️ {domain}: lookup failed - no data returned"
+def format_date(value, include_time=False):
+    """Formats an aware datetime in Dhaka time."""
+    if not value:
+        return "unknown"
 
-    dhaka_tz = pytz.timezone('Asia/Dhaka')
-    source = domain_info.get('source')
+    local = value.astimezone(DHAKA_TZ)
+    if include_time:
+        return local.strftime("%d %b %Y, %I:%M %p GMT+6")
+    return local.strftime("%d %b %Y")
 
-    statuses = domain_info.get('status') or []
+
+def format_duration(delta):
+    """Formats a timedelta as a compact duration, e.g. '360d 6h'."""
+    total_seconds = int(abs(delta.total_seconds()))
+    days, remainder = divmod(total_seconds, 86400)
+    hours, remainder = divmod(remainder, 3600)
+    minutes = remainder // 60
+
+    if days:
+        return f"{days}d {hours}h" if hours else f"{days}d"
+    if hours:
+        return f"{hours}h {minutes}m" if minutes else f"{hours}h"
+    return f"{minutes}m"
+
+
+def status_key(status):
+    """Normalizes a status for comparison with ALERT_STATUSES."""
+    return re.sub(r"[\s_-]+", " ", str(status).strip().lower())
+
+
+def format_statuses(statuses):
+    """Formats EPP/registry statuses without long documentation URLs."""
     if isinstance(statuses, str):
         statuses = [statuses]
-    status_text = ", ".join(status.replace('-', ' ').title() for status in statuses) or "Unknown"
 
-    events = domain_info.get('events') or []
-    registration_raw = get_event_date(events, 'registration')
-    last_changed_raw = get_event_date(events, 'last changed')
-    expiration_raw = domain_info.get('expiresOn') or get_event_date(events, 'expiration')
+    cleaned = []
+    for status in statuses or []:
+        if not status:
+            continue
 
-    registrar = domain_info.get('registrar')
-    message_lines = [
-        f"🌐 <b>{domain}</b>",
-        (f"🏢 <b>Registrar:</b> {registrar}" if registrar
-         else "🏢 <b>Registry:</b> DENIC (registrar not published)"),
-        f"🔒 <b>Status:</b> {status_text}",
-    ]
+        text = (
+            str(status)
+            .replace("-", " ")
+            .replace("_", " ")
+            .strip()
+        )
+        text = re.sub(
+            r"\bgrace(\d)\b",
+            r"grace period \1",
+            text,
+            flags=re.IGNORECASE,
+        )
+        text = re.sub(r"(?<=[a-z0-9])(?=[A-Z])", " ", text)
+        text = text.title()
+        if text:
+            cleaned.append(html.escape(text))
 
-    if registration_raw:
-        registration_date = parse_iso_date(registration_raw)
-        if registration_date:
-            message_lines.append(
-                f"📅 <b>Registered:</b> {registration_date.astimezone(dhaka_tz).strftime('%d %B, %Y')}"
+    return " · ".join(dict.fromkeys(cleaned))
+
+
+def format_registrar(record):
+    """Formats the registrar/registrant line for a domain block."""
+    registrar = str(record.get("registrar") or "").strip()
+    if not registrar or registrar.lower() in {"unknown", "n/a", "none"}:
+        if record.get("source") == "denic":
+            return "🏢 Registry: DENIC (registrar not published)"
+        return ""
+
+    label = record.get("registrar_label") or "Registrar"
+    return f"🏢 {label}: {html.escape(registrar)}"
+
+
+def normalize_domain_info(domain, info):
+    """Converts the different API payloads into one record used by the report."""
+    record = {
+        "domain": domain,
+        "source": "unknown",
+        "registrar": None,
+        "registrar_label": "Registrar",
+        "registered": None,
+        "expires": None,
+        "expiry_time_known": True,
+        "last_changed": None,
+        "statuses": [],
+        "auto_renew": None,
+        "error": None,
+    }
+
+    if not isinstance(info, dict) or not info:
+        record["error"] = "No data returned"
+        return record
+
+    # Spaceship's registrar API (already normalized by spaceship_lookup).
+    if info.get("source") == "spaceship":
+        record["source"] = "spaceship"
+        record["registrar"] = info.get("registrar") or "Spaceship"
+        events = info.get("events") or []
+        record["registered"] = parse_iso_date(
+            get_event_date(events, "registration")
+        )
+        record["expires"] = parse_iso_date(
+            info.get("expiresOn") or get_event_date(events, "expiration")
+        )
+        statuses = info.get("status") or []
+        if isinstance(statuses, str):
+            statuses = [statuses]
+        record["statuses"] = [
+            status
+            for status in statuses
+            if isinstance(status, str) and status.lower() != "registered"
+        ]
+        record["auto_renew"] = info.get("autoRenew")
+        return record
+
+    if info.get("success") is False:
+        record["error"] = str(
+            info.get("error")
+            or info.get("message")
+            or "WHOIS API returned an error"
+        )
+        return record
+
+    # BD WHOIS API.
+    data = info.get("data")
+    if isinstance(data, dict) and any(
+        key in data for key in ("expiry", "activation", "registrant")
+    ):
+        record["source"] = "bd"
+        record["registrar"] = data.get("registrant")
+        record["registrar_label"] = "Registrant"
+        record["registered"] = parse_expiration_date(data.get("activation"))
+        record["expires"] = parse_expiration_date(data.get("expiry"))
+        record["expiry_time_known"] = False
+        return record
+
+    # DENIC RDAP fallback. DENIC uses "status" and normally has no expiresOn.
+    if "status" in info and "statuses" not in info:
+        record["source"] = "denic"
+        events = info.get("events") or []
+        statuses = info.get("status") or []
+        if isinstance(statuses, str):
+            statuses = [statuses]
+        record["statuses"] = [
+            status for status in statuses if isinstance(status, str)
+        ]
+        record["last_changed"] = parse_iso_date(
+            get_event_date(events, "last changed")
+        )
+        record["expires"] = parse_iso_date(
+            info.get("expiresOn") or get_event_date(events, "expiration")
+        )
+        return record
+
+    # IANA RDAP wrapper (sayed.app API).
+    if "expiresOn" in info or "domainName" in info:
+        record["source"] = "rdap"
+        record["registrar"] = info.get("registrar")
+        record["registered"] = parse_expiration_date(info.get("registeredOn"))
+        record["expires"] = parse_expiration_date(info.get("expiresOn"))
+        record["last_changed"] = parse_expiration_date(
+            info.get("lastUpdated")
+        )
+        statuses = info.get("statuses") or []
+        record["statuses"] = [
+            status.get("label")
+            for status in statuses
+            if isinstance(status, dict) and status.get("label")
+        ]
+        return record
+
+    record["error"] = "Unrecognized WHOIS response"
+    return record
+
+
+def get_urgency(record, now, alert_days, warn_days):
+    """Classifies a record by urgency."""
+    if record["error"]:
+        return "error"
+
+    if any(
+        status_key(status) in ALERT_STATUSES
+        for status in record["statuses"]
+    ):
+        return "critical"
+
+    if record["expires"] is None:
+        return "unknown"
+
+    remaining_seconds = (record["expires"] - now).total_seconds()
+    if remaining_seconds <= 0:
+        return "expired"
+    if remaining_seconds <= alert_days * 86400:
+        return "critical"
+    if remaining_seconds <= warn_days * 86400:
+        return "warning"
+    return "healthy"
+
+
+def format_domain_block(record, now, urgency):
+    """Formats one compact domain block for the Telegram report."""
+    domain = html.escape(record["domain"])
+
+    if record["error"]:
+        return [
+            f"❓ <b>{domain}</b> — lookup failed",
+            f"⚠️ {html.escape(record['error'])}",
+        ]
+
+    if record["expires"] is None:
+        status_text = format_statuses(record["statuses"])
+        lines = [
+            f"{URGENCY_EMOJI.get(urgency, 'ℹ️')} <b>{domain}</b> — status only"
+        ]
+        if status_text:
+            lines.append(f"🔒 {status_text}")
+        if record["last_changed"]:
+            lines.append(
+                f"🕒 Last changed {format_date(record['last_changed'])}"
             )
 
-    if last_changed_raw:
-        last_changed = parse_iso_date(last_changed_raw)
-        if last_changed:
-            last_changed_dhaka = last_changed.astimezone(dhaka_tz)
-            message_lines.append(
-                f"🕒 <b>Last Changed:</b> {last_changed_dhaka.strftime('%d %B, %Y %I:%M %p')} GMT+6"
-            )
+        registrar_line = format_registrar(record)
+        if registrar_line:
+            lines.append(registrar_line)
 
-    if "autoRenew" in domain_info:
-        message_lines.append(
-            f"🔄 <b>Auto-renew:</b> {'On' if domain_info.get('autoRenew') else 'Off'}"
+        if not status_text and not record["last_changed"]:
+            lines.append("⚠️ No expiry date returned")
+        return lines
+
+    remaining = record["expires"] - now
+    if remaining.total_seconds() <= 0:
+        headline = (
+            f"🔥 <b>{domain}</b> — expired "
+            f"{format_duration(remaining)} ago"
+        )
+    else:
+        headline = (
+            f"{URGENCY_EMOJI.get(urgency, 'ℹ️')} <b>{domain}</b> — "
+            f"{format_duration(remaining)} left"
         )
 
-    expired = False
-    if expiration_raw:
-        expiration_date = parse_iso_date(expiration_raw)
-        if expiration_date:
-            expiration_date_dhaka = expiration_date.astimezone(dhaka_tz)
-            remaining_time = expiration_date_dhaka - get_dhaka_time()
-            expired = remaining_time.total_seconds() <= 0
-            message_lines.append(
-                f"⏳ <b>Expiration Date:</b> {expiration_date_dhaka.strftime('%d %B, %Y')}"
-            )
-            message_lines.append(
-                f"📆 <b>Remaining:</b> {remaining_time.days} days, {remaining_time.seconds // 3600} hours"
-            )
-    elif source == 'spaceship':
-        message_lines.append("ℹ️ <b>Expiration:</b> Spaceship did not return an expiration date")
-    else:
-        message_lines.append("ℹ️ <b>Expiration:</b> Not published by DENIC (.de is open-ended)")
-
-    statuses_lower = {status.lower() for status in statuses}
-    if expired:
-        message_lines.append("🔥🚨 EXPIRED!")
-    elif statuses_lower & {"redemption", "redemption period", "redemptionperiod",
-                           "pending delete", "pendingdelete"}:
-        message_lines.append("🔥🚨 Domain is deleted or in redemption!")
-    elif statuses_lower & {"grace1", "grace2"}:
-        message_lines.append("🔥🚨 Domain has expired and is in a grace period!")
-    elif statuses_lower & {"free", "available"}:
-        message_lines.append("⚠️ Domain is available for registration!")
-    elif statuses_lower & {"active", "connect", "registered"}:
-        message_lines.append("✅ Everything fine")
-    elif "creating" in statuses_lower:
-        message_lines.append("⏳ Registration is being processed")
-    else:
-        message_lines.append(f"⚠️ Unusual domain status: {status_text}")
-
-    return "\n".join(message_lines)
-
-def format_expiration_message(domain_info, domain):
-    """Formats the expiration information for a domain in Dhaka time (GMT+6)."""
-
-    # .de domains use Spaceship/DENIC data; DENIC has no expiration date.
-    if domain.lower().endswith('.de'):
-        return format_de_message(domain_info, domain)
-
-    # Check if we got a valid response
-    if not domain_info:
-        return f"⚠️ {domain}: API lookup failed - no data returned"
-    
-    # Determine if this is a BD domain response or RDAP response
-    is_bd_domain = 'data' in domain_info and 'expiry' in domain_info.get('data', {})
-    
-    # Extract expiration date based on response type
-    if is_bd_domain:
-        raw_expires = domain_info.get('data', {}).get('expiry')
-        if not raw_expires:
-            print(f"⚠️ {domain}: Missing 'expiry' field in data. Response keys: {list(domain_info.keys())}")
-            return f"⚠️ {domain}: Could not retrieve expiration information."
-    else:
-        if 'expiresOn' not in domain_info:
-            print(f"⚠️ {domain}: Missing 'expiresOn' field. Response keys: {list(domain_info.keys())}")
-            return f"⚠️ {domain}: Could not retrieve expiration information."
-        raw_expires = domain_info.get("expiresOn")
-    
-    print(f"📅 {domain}: Raw expiration = {raw_expires}")
-    
-    # Parse the expiration date
-    expiration_date = parse_expiration_date(raw_expires)
-    
-    if expiration_date is None:
-        return f"⚠️ {domain}: Invalid expiration date format - {raw_expires}"
-    
-    # Get current time in Dhaka timezone
-    dhaka_tz = pytz.timezone('Asia/Dhaka')
-    now_dhaka = get_dhaka_time()
-    
-    # Convert expiration date to Dhaka timezone
-    expiration_date_dhaka = expiration_date.astimezone(dhaka_tz)
-    
-    # Calculate remaining time
-    remaining_time = expiration_date_dhaka - now_dhaka
-    remaining_days = remaining_time.days
-    remaining_hours = remaining_time.seconds // 3600  # Convert seconds to hours
-    
-    # Get registrar/registrant name based on response type
-    if is_bd_domain:
-        registrar_name = domain_info.get('data', {}).get('registrant', 'Unknown')
-        registrar_label = 'Registrant'
-    else:
-        registrar_name = domain_info.get("registrar", "Unknown")
-        registrar_label = 'Registrar'
-    
-    # Format dates for display
-    formatted_expiration_date = expiration_date_dhaka.strftime('%d %B, %Y')
-    formatted_expiration_time = expiration_date_dhaka.strftime('%I:%M %p')  # 12-hour format with AM/PM
-    
-    # Status emoji based on remaining time
-    if remaining_time.total_seconds() > 0:
-        status_emoji = "✅ Everything fine"
-    else:
-        status_emoji = "🔥🚨 EXPIRED!"
-    
-    # Extract EPP status URLs (only for RDAP responses)
-    epp_status_text = ""
-    if not is_bd_domain:
-        epp_status_urls = []
-        for status in domain_info.get("statuses", []):
-            if isinstance(status, dict) and "url" in status:
-                epp_status_urls.append(status["url"])
-        
-        epp_status_text = "\n".join([f"• {url}" for url in epp_status_urls]) if epp_status_urls else "• No EPP URLs found"
-        epp_status_text = f"🔒 <b>EPP Status:</b>\n{epp_status_text}\n"
-    
-    # Format the message (using HTML for better compatibility)
-    message = (
-        f"🌐 <b>{domain}</b>\n"
-        f"🏢 <b>{registrar_label}:</b> {registrar_name}\n"
-        f"⏳ <b>Expiration Date:</b> {formatted_expiration_date}\n"
-        f"🕒 <b>Time:</b> {formatted_expiration_time} GMT+6\n"
-        f"📆 <b>Remaining:</b> {remaining_days} days, {remaining_hours} hours\n"
-        f"{epp_status_text}"
-        f"{status_emoji}"
+    lines = [headline]
+    expiry_text = format_date(
+        record["expires"], include_time=record["expiry_time_known"]
     )
-    
-    return message
 
-def send_telegram_message(message, bot_token, chat_id):
-    """Sends a message to a Telegram bot."""
+    if record["registered"]:
+        lines.append(
+            f"📅 {format_date(record['registered'])} → {expiry_text}"
+        )
+    else:
+        lines.append(f"📅 Expires {expiry_text}")
+
+    registrar_line = format_registrar(record)
+    if registrar_line:
+        lines.append(registrar_line)
+
+    if record["auto_renew"] is not None:
+        lines.append(
+            f"🔄 Auto-renew: {'On' if record['auto_renew'] else 'Off'}"
+        )
+
+    status_text = format_statuses(record["statuses"])
+    if status_text:
+        lines.append(f"🔒 {status_text}")
+
+    return lines
+
+
+def build_report(
+    records,
+    now=None,
+    alert_days=DEFAULT_ALERT_DAYS,
+    warn_days=DEFAULT_WARN_DAYS,
+):
+    """Builds the consolidated Telegram HTML report."""
+    now = now or get_dhaka_time()
+    counts = {
+        key: 0
+        for key in (
+            "error",
+            "expired",
+            "critical",
+            "warning",
+            "healthy",
+            "unknown",
+        )
+    }
+    entries = []
+
+    for record in records:
+        urgency = get_urgency(record, now, alert_days, warn_days)
+        counts[urgency] += 1
+        entries.append((record, urgency))
+
+    urgency_rank = {
+        "error": 0,
+        "expired": 1,
+        "critical": 2,
+        "warning": 3,
+        "healthy": 4,
+        "unknown": 5,
+    }
+    max_date = datetime.datetime.max.replace(tzinfo=datetime.timezone.utc)
+    entries.sort(
+        key=lambda item: (
+            urgency_rank[item[1]],
+            item[0]["expires"] or max_date,
+            item[0]["domain"],
+        )
+    )
+
+    header = [
+        "📋 <b>Domain Watch</b>",
+        f"🕘 {now.strftime('%d %b %Y, %I:%M %p')} GMT+6",
+    ]
+
+    summary_parts = [f"<b>{len(records)}</b> domains"]
+    if counts["healthy"]:
+        summary_parts.append(f"✅ {counts['healthy']} healthy")
+    if counts["warning"]:
+        summary_parts.append(f"🟡 {counts['warning']} watch")
+    if counts["critical"] or counts["expired"]:
+        urgent_count = counts["critical"] + counts["expired"]
+        summary_parts.append(f"🚨 {urgent_count} urgent")
+    if counts["unknown"]:
+        summary_parts.append(f"ℹ️ {counts['unknown']} status-only")
+    if counts["error"]:
+        summary_parts.append(f"❓ {counts['error']} failed")
+    header.append("📊 " + " · ".join(summary_parts))
+
+    upcoming = [
+        (record, record["expires"] - now)
+        for record, _ in entries
+        if record["expires"] and record["expires"] > now
+    ]
+    if upcoming:
+        next_record, next_delta = min(upcoming, key=lambda item: item[1])
+        header.append(
+            "⏰ Next renewal: "
+            f"<b>{html.escape(next_record['domain'])}</b> in "
+            f"{format_duration(next_delta)}"
+        )
+
+    section_defs = [
+        ("❓ <b>Lookup failed</b>", ("error",)),
+        ("🚨 <b>Needs attention</b>", ("expired", "critical")),
+        ("🟡 <b>Watch</b>", ("warning",)),
+        ("✅ <b>Healthy</b>", ("healthy",)),
+        ("ℹ️ <b>Status only</b>", ("unknown",)),
+    ]
+
+    parts = ["\n".join(header)]
+    for title, urgencies in section_defs:
+        blocks = [
+            "\n".join(format_domain_block(record, now, urgency))
+            for record, urgency in entries
+            if urgency in urgencies
+        ]
+        if blocks:
+            parts.append(f"{title}\n\n" + "\n\n".join(blocks))
+
+    has_alerts = (
+        counts["error"] > 0
+        or counts["expired"] > 0
+        or counts["critical"] > 0
+    )
+
+    return {
+        "text": "\n\n".join(parts),
+        "counts": counts,
+        "has_alerts": has_alerts,
+    }
+
+
+def _hard_split(text, max_length):
+    """Splits a single oversized block without losing any text."""
+    chunks = []
+    while len(text) > max_length:
+        split_at = text.rfind("\n", 0, max_length)
+        if split_at <= 0:
+            split_at = max_length
+        chunks.append(text[:split_at].rstrip())
+        text = text[split_at:].lstrip("\n")
+    if text:
+        chunks.append(text)
+    return chunks
+
+
+def split_telegram_message(message, max_length=TELEGRAM_MAX_LENGTH):
+    """Splits a report at block boundaries to stay under Telegram's limit."""
+    if not message:
+        return []
+    if len(message) <= max_length:
+        return [message]
+
+    chunks = []
+    current = ""
+
+    for block in message.split("\n\n"):
+        block = block.strip()
+        if not block:
+            continue
+
+        candidate = f"{current}\n\n{block}" if current else block
+        if len(candidate) <= max_length:
+            current = candidate
+            continue
+
+        if current:
+            chunks.append(current)
+
+        if len(block) > max_length:
+            chunks.extend(_hard_split(block, max_length))
+            current = ""
+        else:
+            current = block
+
+    if current:
+        chunks.append(current)
+
+    return chunks
+
+
+def send_telegram_message(
+    message,
+    bot_token,
+    chat_id,
+    disable_notification=False,
+    retries=3,
+):
+    """Sends an HTML message to Telegram, retrying rate limits/server errors."""
     url = f"https://api.telegram.org/bot{bot_token}/sendMessage"
     payload = {
         "chat_id": chat_id,
         "text": message,
-        "parse_mode": "HTML"
+        "parse_mode": "HTML",
+        "disable_web_page_preview": True,
+        "disable_notification": disable_notification,
     }
-    try:
-        response = requests.post(url, json=payload, timeout=10)
-        response.raise_for_status()
-        print("✅ Telegram message sent successfully.")
-    except requests.exceptions.RequestException as e:
-        print(f"⚠️ Failed to send Telegram message: {e}")
-        # Print response body for debugging
-        if hasattr(e, 'response') and e.response is not None:
-            print(f"📝 Response body: {e.response.text}")
+
+    for attempt in range(retries):
+        try:
+            response = requests.post(url, json=payload, timeout=15)
+
+            if response.status_code == 429:
+                retry_after = 5
+                try:
+                    retry_after = float(
+                        response.json()
+                        .get("parameters", {})
+                        .get("retry_after", 5)
+                    )
+                except (ValueError, TypeError, AttributeError):
+                    pass
+                retry_after = max(1.0, min(retry_after, 60.0))
+                if attempt < retries - 1:
+                    print(
+                        f"⏳ Telegram rate limit; retrying in "
+                        f"{retry_after:g}s..."
+                    )
+                    time.sleep(retry_after)
+                    continue
+                print("⚠️ Telegram rate limit; retries exhausted.")
+                return False
+
+            if 400 <= response.status_code < 500:
+                print(
+                    "⚠️ Telegram rejected the message "
+                    f"(HTTP {response.status_code}): "
+                    f"{response.text[:300]}"
+                )
+                return False
+
+            response.raise_for_status()
+            print("✅ Telegram message sent.")
+            return True
+
+        except requests.exceptions.RequestException as e:
+            # Do not print the raw exception: requests can include the bot
+            # token in the request URL.
+            print(f"⚠️ Telegram send failed: {type(e).__name__}")
+            if attempt < retries - 1:
+                wait_time = (attempt + 1) * 5
+                print(f"⏳ Waiting {wait_time}s before Telegram retry...")
+                time.sleep(wait_time)
+
+    print("💀 Telegram message could not be sent.")
+    return False
+
 
 def main():
-    """Main function to check domain expiration and send a Telegram notification."""
+    """Checks all domains and sends one consolidated Telegram report."""
     domains = [
         "sayed.blog",
         "sayed.page",
@@ -417,43 +806,112 @@ def main():
         "lrs.bd",
         "tracker.bd",
         "nextshop.com.bd",
-        "kriti.app"
+        "kriti.app",
     ]
 
     bot_token = os.environ.get("TELEGRAM_BOT_TOKEN")
     chat_id = os.environ.get("TELEGRAM_CHAT_ID")
+    dry_run = os.environ.get("WHOIS_DRY_RUN", "").strip().lower() in {
+        "1",
+        "true",
+        "yes",
+        "on",
+    }
+    alert_days = max(0, env_int("WHOIS_ALERT_DAYS", DEFAULT_ALERT_DAYS))
+    warn_days = max(
+        alert_days, env_int("WHOIS_WARN_DAYS", DEFAULT_WARN_DAYS)
+    )
+    request_delay = max(
+        0.0,
+        env_float(
+            "WHOIS_REQUEST_DELAY_SECONDS",
+            DEFAULT_REQUEST_DELAY_SECONDS,
+        ),
+    )
 
-    if not bot_token or not chat_id:
-        print("⚠️ Telegram bot token or chat ID not found in environment variables.")
+    if not dry_run and (not bot_token or not chat_id):
+        print(
+            "⚠️ Telegram bot token or chat ID not found. "
+            "Set WHOIS_DRY_RUN=1 to test without Telegram."
+        )
         return
 
-    print(f"🚀 Starting domain expiration check at {get_dhaka_time()}\n")
+    start_time = time.monotonic()
+    print(
+        f"🚀 Checking {len(domains)} domains at "
+        f"{get_dhaka_time().strftime('%d %b %Y, %I:%M %p')} GMT+6"
+    )
 
-    for i, domain in enumerate(domains, 1):
-        print(f"\n{'='*60}")
-        print(f"[{i}/{len(domains)}] Processing: {domain}")
-        print(f"{'='*60}")
-        
-        # Add delay before API call to avoid rate limiting (1 RPS = 1 request per second)
-        if i > 1:
-            time.sleep(2)  # Wait 2 seconds between domains to respect rate limits
-        
-        # Fetch WHOIS data
-        domain_info = whois_lookup(domain)
-        
-        # Format message
-        message = format_expiration_message(domain_info, domain)
-        
-        # Send to Telegram
-        print(f"✉️ Sending to Telegram...")
-        send_telegram_message(message, bot_token, chat_id)
-        
-        # Delay between iterations to respect rate limits (1 RPS)
-        if i < len(domains):
-            time.sleep(1.5)
+    records = []
+    for index, domain in enumerate(domains, 1):
+        print(f"\n[{index}/{len(domains)}] {domain}")
 
-    print(f"\n✅ All domains processed!")
+        # A single short delay is enough for the public APIs. The old code
+        # slept before and after every request, which doubled the runtime.
+        if index > 1 and request_delay > 0:
+            time.sleep(request_delay)
+
+        info = whois_lookup(domain)
+        record = normalize_domain_info(domain, info)
+        records.append(record)
+
+        if record["error"]:
+            print(f"   ❌ {record['error']}")
+        elif record["expires"]:
+            print(
+                "   ✅ expires "
+                + format_date(
+                    record["expires"],
+                    include_time=record["expiry_time_known"],
+                )
+            )
+        else:
+            print("   ℹ️ no expiry date")
+
+    report = build_report(
+        records,
+        alert_days=alert_days,
+        warn_days=warn_days,
+    )
+    counts = report["counts"]
+
+    print(
+        "\n📊 Summary: "
+        + (
+            " · ".join(
+                f"{key}={value}"
+                for key, value in counts.items()
+                if value
+            )
+            or "none"
+        )
+    )
+    print(f"⏱️ Finished in {time.monotonic() - start_time:.1f}s")
+
+    if dry_run:
+        print("\n" + "=" * 60)
+        print("DRY RUN REPORT (not sent to Telegram)")
+        print("=" * 60)
+        print(report["text"])
+        return
+
+    chunks = split_telegram_message(report["text"])
+    print(f"✉️ Sending {len(chunks)} Telegram message(s)...")
+
+    sent = 0
+    for index, chunk in enumerate(chunks, 1):
+        if index > 1:
+            time.sleep(0.5)
+        if send_telegram_message(
+            chunk,
+            bot_token,
+            chat_id,
+            disable_notification=not report["has_alerts"],
+        ):
+            sent += 1
+
+    print(f"✅ Sent {sent}/{len(chunks)} message(s).")
+
 
 if __name__ == "__main__":
     main()
-    
