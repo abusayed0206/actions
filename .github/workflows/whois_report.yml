@@ -27,3 +27,6 @@ jobs:
         env:
           TELEGRAM_BOT_TOKEN: ${{ secrets.TELEGRAM_BOT_TOKEN }}
           TELEGRAM_CHAT_ID: ${{ secrets.TELEGRAM_CHAT_ID }}
+          # Optional: needed to read the registrar-side expiry date for .de domains
+          SPACESHIP_API_KEY: ${{ secrets.SPACESHIP_API_KEY }}
+          SPACESHIP_API_SECRET: ${{ secrets.SPACESHIP_API_SECRET }}
