@@ -14,6 +14,7 @@ DEFAULT_WARN_DAYS = 90
 DEFAULT_REQUEST_DELAY_SECONDS = 1.0
 # shortcut: fixed rate (27 Oct 2026); override with the BDT_PER_USD env var when it drifts.
 DEFAULT_BDT_PER_USD = 124.0
+USD_PER_EUR = float(os.environ.get("USD_PER_EUR") or 1.12)
 
 # Yearly renewal price per domain as (amount, currency).
 # Cloudflare prices are at-cost from cfdomainpricing.com; .bd/.com.bd are BTCL prices.
@@ -24,7 +25,7 @@ RENEWAL_PRICES = {
     "sayed.app": (14.20, "USD"),
     "abusayed.dev": (12.20, "USD"),
     "nayem.page": (10.20, "USD"),
-    "abusayed.de": (7.00, "USD"),  # estimate (Spaceship), check your invoice
+    "abusayed.de": (3.55, "EUR"),  # Spaceship
     "kriti.app": (20.00, "USD"),  # estimate (Name.com), check your invoice
     "lrs.bd": (1800, "BDT"),
     "tracker.bd": (1800, "BDT"),
@@ -596,7 +597,11 @@ def price_usd(domain, bdt_per_usd):
     if not price:
         return None
     amount, currency = price
-    return amount / bdt_per_usd if currency == "BDT" else amount
+    if currency == "BDT":
+        return amount / bdt_per_usd
+    if currency == "EUR":
+        return amount * USD_PER_EUR
+    return amount
 
 
 def format_price(domain, bdt_per_usd):
@@ -607,6 +612,8 @@ def format_price(domain, bdt_per_usd):
     amount, currency = RENEWAL_PRICES[domain]
     if currency == "BDT":
         return f"💵 ৳{amount:,.0f}/yr (≈ ${usd:.2f})"
+    if currency == "EUR":
+        return f"💵 €{amount:.2f}/yr (≈ ${usd:.2f})"
     return f"💵 ${usd:.2f}/yr"
 
 
