@@ -799,6 +799,7 @@ def main():
     domains = [
         "sayed.blog",
         "sayed.page",
+        "sayed.dev",
         "sayed.app",
         "abusayed.dev",
         "abusayed.de",
