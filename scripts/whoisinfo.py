@@ -12,6 +12,24 @@ TELEGRAM_MAX_LENGTH = 3800
 DEFAULT_ALERT_DAYS = 30
 DEFAULT_WARN_DAYS = 90
 DEFAULT_REQUEST_DELAY_SECONDS = 1.0
+# shortcut: fixed rate (27 Oct 2026); override with the BDT_PER_USD env var when it drifts.
+DEFAULT_BDT_PER_USD = 124.0
+
+# Yearly renewal price per domain as (amount, currency).
+# Cloudflare prices are at-cost from cfdomainpricing.com; .bd/.com.bd are BTCL prices.
+RENEWAL_PRICES = {
+    "sayed.blog": (20.20, "USD"),
+    "sayed.page": (10.20, "USD"),
+    "sayed.dev": (12.20, "USD"),
+    "sayed.app": (14.20, "USD"),
+    "abusayed.dev": (12.20, "USD"),
+    "nayem.page": (10.20, "USD"),
+    "abusayed.de": (7.00, "USD"),  # estimate (Spaceship), check your invoice
+    "kriti.app": (20.00, "USD"),  # estimate (Name.com), check your invoice
+    "lrs.bd": (1800, "BDT"),
+    "tracker.bd": (1800, "BDT"),
+    "nextshop.com.bd": (1400, "BDT"),
+}
 
 URGENCY_EMOJI = {
     "error": "❓",
@@ -572,11 +590,32 @@ def format_domain_block(record, now, urgency):
     return lines
 
 
+def price_usd(domain, bdt_per_usd):
+    """Yearly renewal price in USD, or None when the domain has no price set."""
+    price = RENEWAL_PRICES.get(domain)
+    if not price:
+        return None
+    amount, currency = price
+    return amount / bdt_per_usd if currency == "BDT" else amount
+
+
+def format_price(domain, bdt_per_usd):
+    """Formats the renewal price line for a domain block."""
+    usd = price_usd(domain, bdt_per_usd)
+    if usd is None:
+        return ""
+    amount, currency = RENEWAL_PRICES[domain]
+    if currency == "BDT":
+        return f"💵 ৳{amount:,.0f}/yr (≈ ${usd:.2f})"
+    return f"💵 ${usd:.2f}/yr"
+
+
 def build_report(
     records,
     now=None,
     alert_days=DEFAULT_ALERT_DAYS,
     warn_days=DEFAULT_WARN_DAYS,
+    bdt_per_usd=DEFAULT_BDT_PER_USD,
 ):
     """Builds the consolidated Telegram HTML report."""
     now = now or get_dhaka_time()
@@ -634,6 +673,14 @@ def build_report(
         summary_parts.append(f"❓ {counts['error']} failed")
     header.append("📊 " + " · ".join(summary_parts))
 
+    prices = [price_usd(record["domain"], bdt_per_usd) for record in records]
+    total_usd = sum(p for p in prices if p is not None)
+    if total_usd:
+        header.append(
+            f"💰 Yearly renewals: <b>${total_usd:,.2f}</b> "
+            f"(≈ ৳{total_usd * bdt_per_usd:,.0f} at ৳{bdt_per_usd:g}/$)"
+        )
+
     upcoming = [
         (record, record["expires"] - now)
         for record, _ in entries
@@ -658,7 +705,14 @@ def build_report(
     parts = ["\n".join(header)]
     for title, urgencies in section_defs:
         blocks = [
-            "\n".join(format_domain_block(record, now, urgency))
+            "\n".join(
+                format_domain_block(record, now, urgency)
+                + [
+                    line
+                    for line in [format_price(record["domain"], bdt_per_usd)]
+                    if line
+                ]
+            )
             for record, urgency in entries
             if urgency in urgencies
         ]
@@ -873,6 +927,7 @@ def main():
         records,
         alert_days=alert_days,
         warn_days=warn_days,
+        bdt_per_usd=env_float("BDT_PER_USD", DEFAULT_BDT_PER_USD),
     )
     counts = report["counts"]
 
