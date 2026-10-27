@@ -32,6 +32,12 @@ RENEWAL_PRICES = {
     "nextshop.com.bd": (1400, "BDT"),
 }
 
+# Used for the yearly cost plan when the lookup has no expiry date (DENIC hides it).
+EXPIRY_FALLBACK = {
+    "abusayed.de": datetime.date(2027, 10, 16),
+}
+COST_PLAN_LAST_YEAR = 2030
+
 URGENCY_EMOJI = {
     "error": "❓",
     "expired": "🔥",
@@ -617,6 +623,44 @@ def format_price(domain, bdt_per_usd):
     return f"💵 ${usd:.2f}/yr"
 
 
+def build_cost_plan(records, now, bdt_per_usd, last_year=COST_PLAN_LAST_YEAR):
+    """Lists what renews in each calendar year up to last_year, from expiry dates."""
+    years = {year: [] for year in range(now.year, last_year + 1)}
+    for record in records:
+        usd = price_usd(record["domain"], bdt_per_usd)
+        expires = record["expires"] or EXPIRY_FALLBACK.get(record["domain"])
+        if usd is None or expires is None:
+            continue
+        # Each renewal is paid at the expiry date and pushes it one year on.
+        for year in range(expires.year, last_year + 1):
+            if year in years:
+                years[year].append((expires.month, record["domain"], usd))
+
+    lines = [f"📆 <b>Renewal cost by year (to {last_year})</b>"]
+    grand_total = 0.0
+    for year, items in years.items():
+        if not items:
+            lines.append(f"\n<b>{year}</b> — nothing due")
+            continue
+        total = sum(usd for _, _, usd in items)
+        grand_total += total
+        lines.append(
+            f"\n<b>{year}</b> — <b>${total:,.2f}</b> "
+            f"(≈ ৳{total * bdt_per_usd:,.0f}) · {len(items)} renewals"
+        )
+        lines.append(
+            " · ".join(
+                f"{html.escape(domain)} {datetime.date(2000, month, 1):%b}"
+                for month, domain, _ in sorted(items)
+            )
+        )
+    lines.append(
+        f"\n💰 Total {now.year}–{last_year}: <b>${grand_total:,.2f}</b> "
+        f"(≈ ৳{grand_total * bdt_per_usd:,.0f})"
+    )
+    return "\n".join(lines)
+
+
 def build_report(
     records,
     now=None,
@@ -725,6 +769,8 @@ def build_report(
         ]
         if blocks:
             parts.append(f"{title}\n\n" + "\n\n".join(blocks))
+
+    parts.append(build_cost_plan(records, now, bdt_per_usd))
 
     has_alerts = (
         counts["error"] > 0
