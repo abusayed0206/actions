@@ -26,7 +26,7 @@ RENEWAL_PRICES = {
     "abusayed.dev": (12.20, "USD"),
     "nayem.page": (10.20, "USD"),
     "abusayed.de": (3.55, "EUR"),  # Spaceship
-    "kriti.app": (20.00, "USD"),  # estimate (Name.com), check your invoice
+    "kriti.app": (14.20, "USD"),  # Cloudflare rate; moving from Name.com
     "lrs.bd": (1800, "BDT"),
     "tracker.bd": (1800, "BDT"),
     "nextshop.com.bd": (1400, "BDT"),
