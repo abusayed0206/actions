@@ -911,6 +911,7 @@ def main():
         "abusayed.dev",
         "abusayed.de",
         "nayem.page",
+        "nayem.dev",
         "lrs.bd",
         "tracker.bd",
         "nextshop.com.bd",
